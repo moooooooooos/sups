@@ -1,0 +1,47 @@
+# Пример конфигурации Nginx для домена sups-official.ru
+# Скопируйте в /etc/nginx/sites-available/sups-official.ru
+# и создайте симлинк: sudo ln -s /etc/nginx/sites-available/sups-official.ru /etc/nginx/sites-enabled/
+
+server {
+    listen 80;
+    server_name sups-official.ru www.sups-official.ru;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name sups-official.ru www.sups-official.ru;
+
+    # SSL сертификаты (выпускаются через certbot --nginx -d sups-official.ru)
+    # ssl_certificate /etc/letsencrypt/live/sups-official.ru/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/sups-official.ru/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    client_max_body_size 25M;
+
+    # Сжатие gzip
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript image/svg+xml;
+
+    # Отдача загруженных файлов и статики
+    location /uploads/ {
+        alias /var/www/sups-store/public/uploads/;
+        expires 30d;
+        add_header Cache-Control "public, no-transform";
+    }
+
+    # Проксирование всех остальных запросов на Node.js сервер
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}

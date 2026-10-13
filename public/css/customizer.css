@@ -1,0 +1,262 @@
+/* ============================================================
+   SUPS Official — 3D Ring Configurator Styles (/custom-sups)
+   ============================================================ */
+
+.configurator-wrapper {
+  padding: 40px 0 80px;
+}
+
+.ring-configurator {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+  position: relative;
+  align-items: flex-start;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+/* 3D Viewport Panel */
+.view-panel {
+  position: sticky;
+  top: 90px;
+  flex: 1 1 540px;
+  min-height: 580px;
+  height: 75vh;
+  max-height: 700px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
+  background: radial-gradient(circle at center, #ffffff 0%, #ebebeb 100%);
+  border-right: 1px solid #eee;
+}
+
+.viewport-holder {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  cursor: grab;
+}
+
+.viewport-holder:active {
+  cursor: grabbing;
+}
+
+.view-controls {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  pointer-events: none;
+}
+
+.zoom-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.zoom-btn {
+  background: rgba(255,255,255,0.9);
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  transition: all 0.2s;
+}
+
+.zoom-btn.active, .zoom-btn:hover {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}
+
+.metal-selector {
+  position: relative;
+  z-index: 2;
+  background: rgba(255,255,255,0.9);
+  padding: 8px 14px;
+  border-radius: 30px;
+  display: inline-flex;
+  gap: 12px;
+  align-self: center;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  border: 1px solid #eee;
+  backdrop-filter: blur(5px);
+}
+
+.metal-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #ddd;
+  transition: transform 0.2s;
+}
+
+.metal-swatch:hover {
+  transform: scale(1.15);
+}
+
+.metal-swatch.active {
+  box-shadow: 0 0 0 2px #000;
+  transform: scale(1.15);
+}
+
+/* Control Panel */
+.control-panel {
+  flex: 1 1 480px;
+  padding: 30px;
+  background: #fff;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ui-card {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 18px;
+  background: #fafafa;
+}
+
+.ui-card-title {
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  color: #111;
+}
+
+.custom-select, .text-input, .num-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  color: #111;
+}
+
+.custom-select:focus, .text-input:focus, .num-input:focus {
+  border-color: #000;
+  outline: none;
+}
+
+.flex-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.layer-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.layer-tab-btn {
+  flex: 1;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #eee;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.layer-tab-btn.active {
+  background: #000;
+  color: #fff;
+}
+
+.slider-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.slider-group label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.range-slider {
+  width: 100%;
+  accent-color: #000;
+}
+
+.upload-btn-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  background: #ffffff;
+  border: 2px dashed #000;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  transition: background 0.2s;
+}
+
+.upload-btn-label:hover {
+  background: #f0f0f0;
+}
+
+.panel-footer {
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.total-price-tag {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #000;
+}
+
+.btn-custom-add-cart {
+  width: 100%;
+  padding: 16px;
+  font-size: 1rem;
+}
+
+@media (max-width: 900px) {
+  .view-panel {
+    position: relative;
+    top: 0;
+    height: 50vh;
+    min-height: 380px;
+    border-right: none;
+    border-bottom: 1px solid #eee;
+  }
+}

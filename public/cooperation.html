@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Сотрудничество | САПС — бренд концептуальных украшений</title>
+  <meta name="description" content="Сотрудничество с брендом концептуальных украшений САПС: коллаборации с артистами, оптовые поставки в шоурумы и корнеры, работа со стилистами и кастомные корпоративные заказы.">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Jost:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="/css/style.css?v=20261005h">
+  <link rel="stylesheet" href="/css/cart.css">
+  <style>
+    .cooperation-page-wrap {
+      padding: 50px 0 90px;
+      min-height: 70vh;
+    }
+    .cooperation-breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: #888888;
+      margin-bottom: 28px;
+    }
+    .cooperation-breadcrumbs a {
+      color: #666666;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .cooperation-breadcrumbs a:hover {
+      color: #000000;
+    }
+    .cooperation-breadcrumbs span.sep {
+      color: #cccccc;
+    }
+    .cooperation-breadcrumbs span.current {
+      color: #111111;
+      font-weight: 600;
+    }
+    .cooperation-hero {
+      text-align: center;
+      max-width: 820px;
+      margin: 0 auto 50px;
+    }
+    .cooperation-hero-tag {
+      display: inline-block;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #777777;
+      margin-bottom: 12px;
+    }
+    .cooperation-hero-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.01em;
+      line-height: 1.15;
+      margin-bottom: 18px;
+      color: #111111;
+    }
+    .cooperation-hero-desc {
+      font-size: 1.08rem;
+      color: #555555;
+      line-height: 1.7;
+    }
+    .cooperation-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 50px;
+    }
+    .cooperation-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .cooperation-card:hover {
+      border-color: #000000;
+      transform: translateY(-3px);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.07);
+    }
+    .coop-card-top {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .coop-card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #000000;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .coop-card-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      color: #111111;
+    }
+    .coop-card-body {
+      font-size: 0.95rem;
+      color: #555555;
+      line-height: 1.65;
+    }
+    .coop-cta-banner {
+      background: #000000;
+      color: #ffffff;
+      border-radius: 20px;
+      padding: 48px 40px;
+      text-align: center;
+      max-width: 860px;
+      margin: 0 auto;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+    }
+    .coop-cta-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      margin-bottom: 12px;
+    }
+    .coop-cta-desc {
+      font-size: 1.02rem;
+      color: rgba(255, 255, 255, 0.8);
+      max-width: 600px;
+      margin: 0 auto 30px;
+      line-height: 1.6;
+    }
+    .coop-form-btn-main {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #ffffff;
+      color: #000000;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      padding: 16px 36px;
+      border-radius: 30px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .coop-form-btn-main:hover {
+      background: #f0f0f0;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(255, 255, 255, 0.25);
+    }
+    .coop-form-note {
+      font-size: 0.82rem;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 18px;
+    }
+    @media (max-width: 768px) {
+      .cooperation-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .coop-cta-banner {
+        padding: 32px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="brand-logo">
+        САПС
+        <span>STEEL</span>
+      </a>
+
+      <nav class="site-nav">
+        <a href="/catalogue" class="nav-link">Каталог</a>
+        <a href="/rings" class="nav-link">Кольца</a>
+        <a href="/earrings" class="nav-link">Серьги</a>
+        <a href="/pendants" class="nav-link">Подвески</a>
+        <a href="/custom-sups" class="nav-link">3D Кастом</a>
+        <a href="/#about" class="nav-link">О нас</a>
+        <a href="/#reviews" class="nav-link">Отзывы</a>
+        <div class="nav-dropdown-wrap">
+          <button class="nav-dropdown-toggle" type="button">
+            <span>ПОКУПАТЕЛЯМ</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1L5 5L9 1"/></svg>
+          </button>
+          <div class="nav-dropdown-menu">
+            <a href="/buyers?topic=care" class="nav-dropdown-item" data-buyer-topic="care">Уход за украшениями</a>
+            <a href="/buyers?topic=delivery" class="nav-dropdown-item" data-buyer-topic="delivery">Доставка и оплата</a>
+            <a href="/buyers?topic=return" class="nav-dropdown-item" data-buyer-topic="return">Возврат товара</a>
+            <a href="/buyers?topic=warranty" class="nav-dropdown-item" data-buyer-topic="warranty">Гарантия</a>
+            <a href="/buyers?topic=faq" class="nav-dropdown-item" data-buyer-topic="faq">Часто задаваемые вопросы</a>
+            <a href="/buyers?topic=loyalty" class="nav-dropdown-item" data-buyer-topic="loyalty">Программа лояльности</a>
+          </div>
+        </div>
+        <a href="/cooperation" class="nav-link active">Сотрудничество</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="cart-toggle-btn js-cart-toggle" title="Корзина">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span class="cart-count-badge" style="display:none;">0</span>
+        </button>
+
+        <button class="mobile-menu-toggle" title="Меню">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Nav Drawer -->
+  <div class="mobile-nav-drawer">
+    <div class="mobile-nav-header">
+      <div class="brand-logo">САПС</div>
+      <button class="mobile-nav-close" style="background:none; border:none; font-size:1.8rem; cursor:pointer;">×</button>
+    </div>
+    <div class="mobile-nav-links">
+      <a href="/catalogue">Каталог</a>
+      <a href="/rings">Кольца</a>
+      <a href="/earrings">Серьги</a>
+      <a href="/pendants">Подвески</a>
+      <a href="/custom-sups">3D Кастом</a>
+      <a href="/#about">О нас</a>
+      <a href="/#reviews">Отзывы</a>
+      <a href="/cooperation" class="active">Сотрудничество</a>
+    </div>
+  </div>
+
+  <main class="cooperation-page-wrap">
+    <div class="container">
+      <!-- Breadcrumbs -->
+      <div class="cooperation-breadcrumbs">
+        <a href="/">Главная</a>
+        <span class="sep">/</span>
+        <span class="current">Сотрудничество</span>
+      </div>
+
+      <!-- Hero Section -->
+      <div class="cooperation-hero">
+        <span class="cooperation-hero-tag">ПАРТНЕРСТВО И КОЛЛАБОРАЦИИ</span>
+        <h1 class="cooperation-hero-title">Сотрудничество с брендом САПС</h1>
+        <p class="cooperation-hero-desc">
+          САПС создает концептуальные украшения из нержавеющей медицинской стали AISI 304. 
+          Мы открыты для творческих коллабораций, оптовых поставок в ритейл и ярких медиа-проектов.
+        </p>
+      </div>
+
+      <!-- Direction Cards -->
+      <div class="cooperation-cards-grid">
+        <!-- 1: Collabs -->
+        <div class="cooperation-card">
+          <div class="coop-card-top">
+            <div class="coop-card-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            </div>
+            <h3 class="coop-card-title">Коллаборации и артисты</h3>
+          </div>
+          <div class="coop-card-body">
+            Совместная разработка авторских лимитированных линеек украшений, официального мерча и знаковых аксессуаров. Мы уже выпустили успешные релизы со STERVELL, Машей Химой, Стереополиной и группой «без обид». Полный цикл: от 3D-моделирования до упаковки и отправки фанатам.
+          </div>
+        </div>
+
+        <!-- 2: Wholesale -->
+        <div class="cooperation-card">
+          <div class="coop-card-top">
+            <div class="coop-card-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            </div>
+            <h3 class="coop-card-title">Оптовые закупки и корнеры</h3>
+          </div>
+          <div class="coop-card-body">
+            Поставка изделий САПС в концепт-сторы, шоурумы, винтаж-маркеты и оффлайн-пространства по всей России. Предлагаем гибкие оптовые условия, регулярное обновление ассортимента, брендированные подставки и фирменную упаковку для выкладки.
+          </div>
+        </div>
+
+        <!-- 3: Stylists & Media -->
+        <div class="cooperation-card">
+          <div class="coop-card-top">
+            <div class="coop-card-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+            </div>
+            <h3 class="coop-card-title">Стилисты, медиа и съемки</h3>
+          </div>
+          <div class="coop-card-body">
+            Предоставляем украшения для съемок музыкальных клипов, лукбуков, фешн-показов, журнальных фотосессий и работы с инфлюенсерами. Подбираем акцентные комплекты под стиль проекта с оперативной доставкой.
+          </div>
+        </div>
+
+        <!-- 4: Corporate & Custom -->
+        <div class="cooperation-card">
+          <div class="coop-card-top">
+            <div class="coop-card-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            </div>
+            <h3 class="coop-card-title">Корпоративный 3D-кастом</h3>
+          </div>
+          <div class="coop-card-body">
+            Разработка эксклюзивных металлических украшений с глубокой лазерной гравировкой, сложной геометрией и 3D-печатью/литьем под ваш бренд, фестиваль или закрытое сообщество. Тиражи от штучных до сотен единиц.
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA Banner -->
+      <div class="coop-cta-banner">
+        <h2 class="coop-cta-title">Хотите реализовать проект с нами?</h2>
+        <p class="coop-cta-desc">
+          Заполните короткую форму заявки на сотрудничество. Наш куратор проектов свяжется с вами в Telegram или по почте в течение 24 часов для обсуждения деталей.
+        </p>
+        <a href="https://docs.google.com/forms/d/e/1FAIpQLSc50i2ovYIHHbicXJiaCUDS9l8On8IvT7Xe2NQwiEGyUKB4xQ/viewform" target="_blank" rel="noopener noreferrer" class="coop-form-btn-main">
+          <span>Заполнить анкету на сотрудничество</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+        </a>
+        <div class="coop-form-note">Переадресация на защищенную форму Google Forms</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="brand-logo" style="color:#ffffff; margin-bottom:12px;">САПС</div>
+          <p class="footer-desc">
+            Бренд концептуальных украшений из стали AISI 304. Создаем акценты, которые подчеркивают внутреннюю силу и философию.
+          </p>
+        </div>
+        <div>
+          <h4 class="footer-title">Навигация</h4>
+          <ul class="footer-links">
+            <li><a href="/catalogue">Весь каталог</a></li>
+            <li><a href="/rings">Кольца</a></li>
+            <li><a href="/earrings">Серьги</a></li>
+            <li><a href="/pendants">Подвески</a></li>
+            <li><a href="/custom-sups">3D Кастом</a></li>
+            <li><a href="/cooperation">Сотрудничество</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="footer-title">Покупателям</h4>
+          <ul class="footer-links">
+            <li><a href="/buyers?topic=care">Уход за украшениями</a></li>
+            <li><a href="/buyers?topic=delivery">Доставка и оплата</a></li>
+            <li><a href="/buyers?topic=return">Возврат товара</a></li>
+            <li><a href="/buyers?topic=warranty">Гарантия</a></li>
+            <li><a href="/sizer">Определить размер</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="footer-title">Контакты</h4>
+          <ul class="footer-links">
+            <li><a href="https://t.me/sups_steel" target="_blank">Telegram: @sups_steel</a></li>
+            <li><a href="https://vk.com/sups.steel" target="_blank">VK: sups.steel</a></li>
+            <li><span style="color:#888;">г. Екатеринбург, Вайнера 9</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <div>© 2026 САПС. Все права защищены.</div>
+        <div style="display:flex; gap:16px;">
+          <a href="/privacy" style="color:#888;">Политика конфиденциальности</a>
+          <a href="/agreement" style="color:#888;">Пользовательское соглашение</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/cart.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

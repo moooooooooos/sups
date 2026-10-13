@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Статус заказа | САПС</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Jost:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .status-page-wrap {
+      min-height: calc(100vh - 120px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      background: #fbfbfd;
+    }
+    .status-card {
+      background: #ffffff;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 24px;
+      max-width: 680px;
+      width: 100%;
+      padding: 44px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04);
+      text-align: center;
+    }
+    .status-icon-wrap {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .status-icon-wrap.success {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    .status-icon-wrap.pending {
+      background: #fff8e1;
+      color: #f57f17;
+    }
+    .status-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 10px;
+      color: #111111;
+    }
+    .status-subtitle {
+      font-size: 1rem;
+      color: #666666;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+    .order-info-box {
+      background: #f8f8fa;
+      border-radius: 16px;
+      padding: 24px;
+      text-align: left;
+      margin-bottom: 28px;
+      border: 1px solid rgba(0, 0, 0, 0.04);
+    }
+    .order-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      font-size: 0.95rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    }
+    .order-info-row:last-child {
+      border-bottom: none;
+    }
+    .order-info-label {
+      color: #777;
+    }
+    .order-info-val {
+      font-weight: 600;
+      color: #111;
+    }
+    .order-items-list {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px dashed rgba(0, 0, 0, 0.1);
+    }
+    .order-item-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+    }
+    .order-item-img {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: #eee;
+    }
+    .order-item-details {
+      flex: 1;
+    }
+    .order-item-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #111;
+    }
+    .order-item-meta {
+      font-size: 0.8rem;
+      color: #888;
+    }
+    .status-actions {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-main {
+      padding: 14px 28px;
+      background: #111;
+      color: #fff;
+      font-weight: 600;
+      border-radius: 12px;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-main:hover {
+      background: #333;
+      transform: translateY(-1px);
+    }
+    .btn-outline {
+      padding: 14px 28px;
+      background: transparent;
+      color: #111;
+      border: 1px solid #ddd;
+      font-weight: 600;
+      border-radius: 12px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-outline:hover {
+      border-color: #111;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Minimal Header -->
+  <header class="site-header" style="position:relative;">
+    <div class="container header-inner">
+      <a href="./" class="brand-logo">
+        САПС
+        <span>STEEL</span>
+      </a>
+      <div style="font-size: 0.9rem; color: #777; font-weight: 500;">
+        Безопасная оплата через ЮKassa
+      </div>
+    </div>
+  </header>
+
+  <main class="status-page-wrap">
+    <div class="status-card" id="status-card">
+      <div class="status-icon-wrap success" id="status-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+
+      <h1 class="status-title" id="status-title">Заказ успешно оплачен</h1>
+      <p class="status-subtitle" id="status-subtitle">
+        Спасибо за покупку! Мы уже готовим ваше концептуальное изделие к отправке. Чек и трек-номер поступят в SMS и Telegram.
+      </p>
+
+      <div class="order-info-box">
+        <div class="order-info-row">
+          <span class="order-info-label">Номер заказа</span>
+          <span class="order-info-val" id="val-order-number" style="font-family:monospace; font-size:1.05rem;">—</span>
+        </div>
+        <div class="order-info-row">
+          <span class="order-info-label">Статус оплаты</span>
+          <span class="order-info-val" id="val-payment-status" style="color:#2e7d32;">Оплачено онлайн</span>
+        </div>
+        <div class="order-info-row">
+          <span class="order-info-label">Получатель</span>
+          <span class="order-info-val" id="val-customer-name">—</span>
+        </div>
+        <div class="order-info-row">
+          <span class="order-info-label">Телефон</span>
+          <span class="order-info-val" id="val-customer-phone">—</span>
+        </div>
+        <div class="order-info-row">
+          <span class="order-info-label">Доставка</span>
+          <span class="order-info-val" id="val-delivery">—</span>
+        </div>
+        <div class="order-info-row">
+          <span class="order-info-label">Сумма к оплате</span>
+          <span class="order-info-val" id="val-total-price" style="font-size:1.1rem; color:#111;">— ₽</span>
+        </div>
+
+        <div class="order-items-list" id="order-items-container">
+          <!-- Items will be loaded here -->
+        </div>
+      </div>
+
+      <div class="status-actions">
+        <a href="catalogue.html" class="btn-main">
+          Вернуться в каталог
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="./" class="btn-outline">На главную</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const orderNumber = urlParams.get('order_number') || 'SUPS-DEMO';
+
+      document.getElementById('val-order-number').textContent = orderNumber;
+
+      try {
+        const res = await fetch(`/api/payments/status/${encodeURIComponent(orderNumber)}`);
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('val-order-number').textContent = data.order_number;
+          document.getElementById('val-customer-name').textContent = data.customer_name || 'Покупатель';
+          document.getElementById('val-customer-phone').textContent = data.customer_phone || '—';
+          document.getElementById('val-delivery').textContent = `${data.delivery_method || 'СДЭК'} (${data.delivery_address || 'Самовывоз'})`;
+          document.getElementById('val-total-price').textContent = `${Number(data.total_price).toLocaleString('ru-RU')} ₽`;
+
+          const isPaid = data.payment_status === 'paid' || data.status === 'paid';
+          const iconEl = document.getElementById('status-icon');
+          const titleEl = document.getElementById('status-title');
+          const subEl = document.getElementById('status-subtitle');
+          const payStatusEl = document.getElementById('val-payment-status');
+
+          if (isPaid) {
+            iconEl.className = 'status-icon-wrap success';
+            iconEl.innerHTML = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+            titleEl.textContent = 'Заказ успешно оплачен';
+            subEl.textContent = 'Оплата через ЮKassa подтверждена. Мы бережно упакуем ваше изделие в фирменный тубус САПС и передадим в доставку.';
+            payStatusEl.textContent = 'Оплачено ✅';
+            payStatusEl.style.color = '#2e7d32';
+          } else {
+            iconEl.className = 'status-icon-wrap pending';
+            iconEl.innerHTML = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+            titleEl.textContent = 'Заказ оформлен (ожидает оплаты)';
+            subEl.textContent = 'Ваш заказ принят. Для завершения заказа, пожалуйста, перейдите к оплате.';
+            payStatusEl.textContent = 'Ожидает оплаты ⏳';
+            payStatusEl.style.color = '#f57f17';
+          }
+
+          // Items
+          const itemsContainer = document.getElementById('order-items-container');
+          if (data.items && data.items.length > 0) {
+            itemsContainer.innerHTML = data.items.map(item => `
+              <div class="order-item-row">
+                <img src="${(item.image || 'assets/placeholder.jpg').replace(/^\//, '')}" class="order-item-img" alt="${item.title}" onerror="this.src='assets/placeholder.jpg'">
+                <div class="order-item-details">
+                  <div class="order-item-title">${item.title}</div>
+                  <div class="order-item-meta">${item.size ? 'Размер: ' + item.size + ' • ' : ''}${item.quantity} шт.</div>
+                </div>
+                <div style="font-weight:600; font-size:0.95rem;">${(Number(item.price) * (item.quantity || 1)).toLocaleString('ru-RU')} ₽</div>
+              </div>
+            `).join('');
+          }
+        }
+      } catch (e) {
+        console.warn('Could not load order details from API, using defaults');
+      }
+    });
+  </script>
+</body>
+</html>

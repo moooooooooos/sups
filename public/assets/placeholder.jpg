@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <rect width="600" height="600" fill="#f4f4f4"/>
+  <circle cx="300" cy="300" r="140" fill="none" stroke="#222222" stroke-width="24"/>
+  <circle cx="300" cy="300" r="115" fill="none" stroke="#cccccc" stroke-width="2"/>
+  <text x="300" y="310" font-family="'Montserrat', sans-serif" font-weight="900" font-size="28" fill="#111111" text-anchor="middle" letter-spacing="6">САПС</text>
+  <text x="300" y="340" font-family="'Montserrat', sans-serif" font-weight="600" font-size="12" fill="#888888" text-anchor="middle" letter-spacing="3">JEWELRY</text>
+</svg>
