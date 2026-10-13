@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Покупателям | САПС — бренд концептуальных украшений</title>
+  <meta name="description" content="Информация для покупателей бренда САПС: уход за изделиями из стали AISI 304, условия доставки и оплаты, гарантия 12 месяцев, возврат и программа лояльности.">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Jost:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/style.css?v=20261005h">
+  <link rel="stylesheet" href="css/cart.css">
+  <style>
+    .buyers-page-wrap {
+      padding: 50px 0 90px;
+      min-height: 70vh;
+    }
+    .buyers-breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      color: #888888;
+      margin-bottom: 28px;
+    }
+    .buyers-breadcrumbs a {
+      color: #666666;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .buyers-breadcrumbs a:hover {
+      color: #000000;
+    }
+    .buyers-breadcrumbs span.sep {
+      color: #cccccc;
+    }
+    .buyers-breadcrumbs span.current {
+      color: #111111;
+      font-weight: 600;
+    }
+    .buyers-layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+    .buyers-sidebar {
+      position: sticky;
+      top: 100px;
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    }
+    .buyers-sidebar-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #111111;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 10px 14px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 8px;
+    }
+    .buyers-side-nav {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .buyers-side-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      text-align: left;
+      padding: 12px 14px;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: #444444;
+      background: none;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    }
+    .buyers-side-btn:hover {
+      background: #f5f5f7;
+      color: #000000;
+      transform: translateX(3px);
+    }
+    .buyers-side-btn.active {
+      background: #000000;
+      color: #ffffff;
+      transform: none;
+    }
+    .buyers-side-btn.active svg {
+      stroke: #ffffff;
+    }
+    .buyers-content-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 44px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.03);
+    }
+    .buyers-content-header {
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .buyers-topic-tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #666666;
+      background: #f0f0f2;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+    .buyers-content-title {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      color: #111111;
+      margin: 0;
+    }
+    .buyers-content-body {
+      color: #333333;
+      font-size: 1.02rem;
+      line-height: 1.75;
+    }
+    .buyers-content-body h4 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #111111;
+      margin: 28px 0 12px;
+    }
+    .buyers-content-body h4:first-child {
+      margin-top: 0;
+    }
+    .buyers-content-body p {
+      margin-bottom: 16px;
+    }
+    .buyers-content-body ul {
+      margin: 12px 0 20px 20px;
+    }
+    .buyers-content-body li {
+      margin-bottom: 8px;
+    }
+    .buyers-content-footer {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 900px) {
+      .buyers-layout {
+        grid-template-columns: 1fr;
+        gap: 30px;
+      }
+      .buyers-sidebar {
+        position: static;
+      }
+      .buyers-content-card {
+        padding: 28px 20px;
+      }
+      .buyers-content-title {
+        font-size: 1.6rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand-logo">
+        САПС
+        <span>STEEL</span>
+      </a>
+
+      <nav class="site-nav">
+        <a href="catalogue.html" class="nav-link">Каталог</a>
+        <a href="rings.html" class="nav-link">Кольца</a>
+        <a href="earrings.html" class="nav-link">Серьги</a>
+        <a href="pendants.html" class="nav-link">Подвески</a>
+        <a href="custom-sups.html" class="nav-link">3D Кастом</a>
+        <a href="#about" class="nav-link">О нас</a>
+        <a href="#reviews" class="nav-link">Отзывы</a>
+        <div class="nav-dropdown-wrap">
+          <button class="nav-dropdown-toggle" type="button">
+            <span>ПОКУПАТЕЛЯМ</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1L5 5L9 1"/></svg>
+          </button>
+          <div class="nav-dropdown-menu">
+            <a href="buyers.html?topic=care" class="nav-dropdown-item" data-buyer-topic="care">Уход за украшениями</a>
+            <a href="buyers.html?topic=delivery" class="nav-dropdown-item" data-buyer-topic="delivery">Доставка и оплата</a>
+            <a href="buyers.html?topic=return" class="nav-dropdown-item" data-buyer-topic="return">Возврат товара</a>
+            <a href="buyers.html?topic=warranty" class="nav-dropdown-item" data-buyer-topic="warranty">Гарантия</a>
+            <a href="buyers.html?topic=faq" class="nav-dropdown-item" data-buyer-topic="faq">Часто задаваемые вопросы</a>
+            <a href="buyers.html?topic=loyalty" class="nav-dropdown-item" data-buyer-topic="loyalty">Программа лояльности</a>
+          </div>
+        </div>
+        <a href="cooperation.html" class="nav-link js-open-cooperation" id="nav-cooperation-link">Сотрудничество</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="cart-toggle-btn js-cart-toggle" title="Корзина">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span class="cart-count-badge" style="display:none;">0</span>
+        </button>
+
+        <button class="mobile-menu-toggle" title="Меню">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Nav Drawer -->
+  <div class="mobile-nav-drawer">
+    <div class="mobile-nav-header">
+      <div class="brand-logo">САПС</div>
+      <button class="mobile-nav-close" style="background:none; border:none; font-size:1.8rem; cursor:pointer;">×</button>
+    </div>
+    <div class="mobile-nav-links">
+      <a href="catalogue.html">Каталог</a>
+      <a href="rings.html">Кольца</a>
+      <a href="earrings.html">Серьги</a>
+      <a href="pendants.html">Подвески</a>
+      <a href="bracelets.html">Браслеты</a>
+      <a href="custom-sups.html">3D Кастом</a>
+      <a href="#about">О нас</a>
+      <a href="#reviews">Отзывы</a>
+      <a href="buyers.html">Покупателям</a>
+      <a href="cooperation.html" class="js-open-cooperation">Сотрудничество</a>
+    </div>
+  </div>
+
+  <!-- Main Page Content -->
+  <main class="buyers-page-wrap">
+    <div class="container">
+      <!-- Breadcrumbs -->
+      <nav class="buyers-breadcrumbs" aria-label="Хлебные крошки">
+        <a href="index.html">Главная</a>
+        <span class="sep">/</span>
+        <a href="buyers.html">Покупателям</a>
+        <span class="sep">/</span>
+        <span id="breadcrumb-topic" class="current">Уход за украшениями</span>
+      </nav>
+
+      <div class="buyers-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="buyers-sidebar">
+          <div class="buyers-sidebar-title">Разделы</div>
+          <ul class="buyers-side-nav">
+            <li>
+              <a href="buyers.html?topic=care" class="buyers-side-btn active" data-topic="care">
+                <span>Уход за украшениями</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </a>
+            </li>
+            <li>
+              <a href="buyers.html?topic=delivery" class="buyers-side-btn" data-topic="delivery">
+                <span>Доставка и оплата</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </a>
+            </li>
+            <li>
+              <a href="buyers.html?topic=return" class="buyers-side-btn" data-topic="return">
+                <span>Возврат товара</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </a>
+            </li>
+            <li>
+              <a href="buyers.html?topic=warranty" class="buyers-side-btn" data-topic="warranty">
+                <span>Гарантия</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </a>
+            </li>
+            <li>
+              <a href="buyers.html?topic=faq" class="buyers-side-btn" data-topic="faq">
+                <span>Часто задаваемые вопросы</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </a>
+            </li>
+            <li>
+              <a href="buyers.html?topic=loyalty" class="buyers-side-btn" data-topic="loyalty">
+                <span>Программа лояльности</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </a>
+            </li>
+          </ul>
+        </aside>
+
+        <!-- Main Topic Content -->
+        <article class="buyers-content-card">
+          <div class="buyers-content-header">
+            <span class="buyers-topic-tag">Информация для клиентов</span>
+            <h1 id="buyers-page-title" class="buyers-content-title">Уход за украшениями</h1>
+          </div>
+
+          <div id="buyers-page-body" class="buyers-content-body">
+            <!-- Content dynamically rendered -->
+          </div>
+
+          <div class="buyers-content-footer">
+            <span style="font-size: 0.92rem; color: #666;">Остались вопросы по заказу или характеристикам?</span>
+            <a href="https://t.me/sups_steel" target="_blank" class="btn btn-primary btn-sm">Связаться в Telegram</a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <a href="index.html" class="brand-logo">
+          <span class="logo-main">САПС</span>
+          <span class="logo-sub">STEEL</span>
+        </a>
+        <p class="footer-tagline">Бренд концептуальных стальных украшений со смыслом.</p>
+        <p class="footer-copyright">© 2026 САПС. Все права защищены.</p>
+      </div>
+      <div>
+        <h4 class="footer-col-title">Каталог</h4>
+        <ul class="footer-links">
+          <li><a href="catalogue.html">Все украшения</a></li>
+          <li><a href="rings.html">Кольца</a></li>
+          <li><a href="earrings.html">Серьги</a></li>
+          <li><a href="pendants.html">Подвески</a></li>
+          <li><a href="custom-sups.html">3D Кастом</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4 class="footer-col-title">Покупателям</h4>
+        <ul class="footer-links">
+          <li><a href="buyers.html?topic=care">Уход за украшениями</a></li>
+          <li><a href="buyers.html?topic=delivery">Доставка и оплата</a></li>
+          <li><a href="buyers.html?topic=return">Возврат товара</a></li>
+          <li><a href="buyers.html?topic=warranty">Гарантия</a></li>
+          <li><a href="buyers.html?topic=faq">Часто задаваемые вопросы</a></li>
+          <li><a href="buyers.html?topic=loyalty">Программа лояльности</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/cart.js"></script>
+  <script src="js/main.js?v=20261005e"></script>
+  <script>
+    // Standalone page topic switcher
+    (function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      let currentTopic = urlParams.get('topic') || 'care';
+      if (!BUYERS_TOPICS[currentTopic]) currentTopic = 'care';
+
+      function renderTopic(key) {
+        const data = BUYERS_TOPICS[key] || BUYERS_TOPICS.care;
+        document.getElementById('buyers-page-title').textContent = data.title;
+        document.getElementById('breadcrumb-topic').textContent = data.title;
+        document.getElementById('buyers-page-body').innerHTML = data.content;
+        document.title = data.title + ' | САПС';
+
+        document.querySelectorAll('.buyers-side-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.topic === key);
+        });
+      }
+
+      renderTopic(currentTopic);
+
+      document.querySelectorAll('.buyers-side-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const topic = btn.dataset.topic;
+          history.pushState(null, '', '/buyers?topic=' + topic);
+          renderTopic(topic);
+        });
+      });
+
+      window.addEventListener('popstate', () => {
+        const params = new URLSearchParams(window.location.search);
+        renderTopic(params.get('topic') || 'care');
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Серьги | САПС</title>
+  <meta name="description" content="Полный каталог украшений бренда САПС: кольца с глубокой лазерной гравировкой, серьги, подвески и браслеты. Выберите свой смысловой акцент.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Jost:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/catalog.css?v=20261005a">
+  <link rel="stylesheet" href="css/cart.css">
+</head>
+<body data-category="earrings">
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand-logo">
+        САПС
+        <span>STEEL</span>
+      </a>
+
+      <nav class="site-nav">
+        <a href="catalogue.html" class="nav-link">Каталог</a>
+        <a href="rings.html" class="nav-link">Кольца</a>
+        <a href="earrings.html" class="nav-link active">Серьги</a>
+        <a href="pendants.html" class="nav-link">Подвески</a>
+        <a href="custom-sups.html" class="nav-link">3D Кастом</a>
+        <a href="#about" class="nav-link">О нас</a>
+        <a href="#reviews" class="nav-link">Отзывы</a>
+        <div class="nav-dropdown-wrap">
+          <button class="nav-dropdown-toggle" type="button">
+            <span>ПОКУПАТЕЛЯМ</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1L5 5L9 1"/></svg>
+          </button>
+          <div class="nav-dropdown-menu">
+            <a href="buyers.html?topic=care" class="nav-dropdown-item" data-buyer-topic="care">Уход за украшениями</a>
+            <a href="buyers.html?topic=delivery" class="nav-dropdown-item" data-buyer-topic="delivery">Доставка и оплата</a>
+            <a href="buyers.html?topic=return" class="nav-dropdown-item" data-buyer-topic="return">Возврат товара</a>
+            <a href="buyers.html?topic=warranty" class="nav-dropdown-item" data-buyer-topic="warranty">Гарантия</a>
+            <a href="buyers.html?topic=faq" class="nav-dropdown-item" data-buyer-topic="faq">Часто задаваемые вопросы</a>
+            <a href="buyers.html?topic=loyalty" class="nav-dropdown-item" data-buyer-topic="loyalty">Программа лояльности</a>
+          </div>
+        </div>
+        <a href="cooperation.html" class="nav-link js-open-cooperation" id="nav-cooperation-link">Сотрудничество</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="cart-toggle-btn js-cart-toggle" title="Корзина">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span class="cart-count-badge" style="display:none;">0</span>
+        </button>
+
+        <button class="mobile-menu-toggle" title="Меню">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="catalog-page-header">
+      <h1 class="catalog-title">Серьги</h1>
+      <p class="catalog-subtitle">Концептуальные серьги САПС с лазерной детализацией.</p>
+    </div>
+
+    <!-- Filter Navigation Bar -->
+    <div class="catalog-nav-bar">
+      <!-- Category Pills -->
+      <div id="category-pills" class="category-pills">
+        <!-- Loaded dynamically -->
+      </div>
+
+      <!-- Controls Row: Search, Collections, Sizes, Sorting -->
+      <div class="filter-controls-row">
+        <div class="filter-left-group">
+          <div class="search-box">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="catalog-search-input" class="search-input" placeholder="Поиск по названию...">
+          </div>
+
+          <select id="filter-collection-select" class="filter-select">
+            <option value="">Все коллекции</option>
+          </select>
+        </div>
+
+        <div class="filter-right-group">
+          <!-- Size chips -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: #888;">РАЗМЕР:</span>
+            <div id="size-chips-list" class="size-chips-container"></div>
+          </div>
+
+          <!-- Sort -->
+          <select id="catalog-sort-select" class="filter-select">
+            <option value="default">Сортировка: По умолчанию</option>
+            <option value="price_asc">Сначала дешевле</option>
+            <option value="price_desc">Сначала дороже</option>
+            <option value="newest">Новинки</option>
+            <option value="title_asc">По названию (А-Я)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="catalog-stats-row">
+        <div id="catalog-products-count">Загрузка каталога...</div>
+        <div>
+          <a href="sizer.html" style="font-weight:600; text-decoration:underline;">Как определить свой размер?</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div id="products-grid-container" class="products-grid">
+      <!-- Dynamic Products Grid -->
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="brand-logo" style="color:#ffffff; margin-bottom:12px;">САПС</div>
+          <p class="footer-desc">
+            Бренд концептуальных украшений из стали AISI 304. Создаем акценты, которые подчеркивают внутреннюю силу и философию.
+          </p>
+          <div class="footer-social-links">
+            <a href="https://t.me/sups_steel" target="_blank" class="footer-social-btn" title="Telegram">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.75-.55 2.95-1.28 4.92-2.13 5.92-2.54 2.82-1.17 3.4-1.38 3.79-1.38.08 0 .28.02.4.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/></svg>
+            </a>
+            <a href="https://vk.com/sups.steel" target="_blank" class="footer-social-btn" title="ВКонтакте">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M15.684 0H8.316C2.992 0 0 2.992 0 8.316v7.368C0 21.008 2.992 24 8.316 24h7.368C21.008 24 24 21.008 24 15.684V8.316C24 2.992 21.008 0 15.684 0zm3.692 17.123h-1.744c-.66 0-.864-.525-2.052-1.716-1.037-1.013-1.497-1.144-1.753-1.144-.358 0-.46.103-.46.59v1.657c0 .42-.134.613-1.25.613-1.847 0-3.894-1.123-5.334-3.203-2.164-3.076-2.765-5.39-2.765-5.864 0-.256.102-.492.59-.492h1.744c.44 0 .604.205.773.682.85 2.476 2.274 4.646 2.865 4.646.22 0 .323-.102.323-.665v-2.58c-.066-1.178-.69-1.279-.69-1.699 0-.2.17-.4.44-.4h2.744c.37 0 .502.195.502.63v3.49c0 .374.164.502.276.502.22 0 .405-.128.815-.538 1.254-1.405 2.15-3.57 2.15-3.57.12-.256.328-.492.774-.492h1.744c.522 0 .635.266.522.63-.205.954-2.21 3.79-2.313 3.95-.22.348-.307.502 0 .913.22.297.948.928 1.435 1.49 1.154 1.302 1.636 2.005 1.636 2.005.18.297.056.492-.374.492z"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="footer-col-title">Каталог</h4>
+          <ul class="footer-links">
+            <li><a href="catalogue.html">Все изделия</a></li>
+            <li><a href="rings.html">Кольца</a></li>
+            <li><a href="earrings.html">Серьги</a></li>
+            <li><a href="pendants.html">Подвески</a></li>
+            <li><a href="bracelets.html">Браслеты</a></li>
+            <li><a href="custom-sups.html">3D Кастом</a></li>
+            <li><a href="mystery.html">Секретный конверт</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-col-title">Покупателям</h4>
+          <ul class="footer-links">
+            <li><a href="sizer.html">Определитель размера</a></li>
+            <li><a href="#about">О бренде</a></li>
+            <li><a href="#reviews">Отзывы</a></li>
+            <li><a href="#addresses">Адреса магазинов</a></li>
+            <li><a href="leave-review.html">Написать отзыв</a></li>
+            <li><a href="privacy.html">Политика конфиденциальности</a></li>
+            <li><a href="agreement.html">Пользовательское соглашение</a></li>
+            <li><a href="offer.html">Оферта</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="footer-col-title">Контакты</h4>
+          <ul class="footer-links">
+            <li><a href="tel:+79526659299">+7 (952) 665-92-99</a></li>
+            <li><a href="mailto:sups.official.spb@gmail.com">sups.official.spb@gmail.com</a></li>
+            <li><a href="https://t.me/sups_steel" target="_blank">Telegram: @sups_steel</a></li>
+            <li style="margin-top:12px; color:#888; font-size:0.8rem;">
+              ИП Богданов Роман Николаевич<br>
+              ОГРНИП 324861700088491<br>
+              ИНН 450126517632
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>© 2026 САПС (sups-official.ru). Все права защищены.</div>
+        <div class="footer-requisites">Доставка по всей России (СДЭК, Почта России)</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Floating Social Button & Popup Widget -->
+  <button id="custom-social-floating-btn" class="custom-social-floating-btn" style="display: none;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 11.5C21.0034 12.8199 20.6951 14.1219 20.1 15.3C19.3944 16.7118 18.3098 17.8992 16.9674 18.7293C15.6251 19.5594 14.0782 19.9994 12.5 20C11.1801 20.0035 9.87812 19.6951 8.7 19.1L3 21L4.9 15.3C4.30493 14.1219 3.99656 12.8199 4 11.5C4.00061 9.92179 4.44061 8.37488 5.27072 7.03258C6.10083 5.69028 7.28825 4.6056 8.7 3.90003C9.87812 3.30496 11.1801 2.99659 12.5 3C14.7525 3.00305 16.9113 3.89966 18.5036 5.49444C20.096 7.08922 20.9945 9.2492 21 11.5Z"/>
+    </svg>
+    <span>Соцсети</span>
+  </button>
+
+  <div id="custom-social-popup" class="custom-social-popup">
+    <div class="custom-social-popup-content">
+      <div class="custom-social-popup-header">
+        <h4>Мы в соцсетях</h4>
+        <button id="custom-social-popup-close" class="custom-social-popup-close">×</button>
+      </div>
+      <p>Мы можем больше никогда не увидеться, поэтому подпишись на наши соцсети, чтобы не потерять!</p>
+      <div class="custom-social-popup-buttons">
+        <a href="https://t.me/sups_steel" target="_blank" class="custom-social-btn">
+          <span>Telegram</span>
+        </a>
+        <a href="https://vk.com/sups.steel" target="_blank" class="custom-social-btn">
+          <span>ВКонтакте</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Nav Drawer -->
+  <div class="mobile-nav-drawer">
+    <div class="mobile-nav-header">
+      <div class="brand-logo">САПС</div>
+      <button class="mobile-nav-close" style="background:none; border:none; font-size:1.8rem; cursor:pointer;">×</button>
+    </div>
+    <div class="mobile-nav-links">
+      <a href="catalogue.html">Каталог</a>
+      <a href="rings.html">Кольца</a>
+      <a href="earrings.html">Серьги</a>
+      <a href="pendants.html">Подвески</a>
+      <a href="bracelets.html">Браслеты</a>
+      <a href="custom-sups.html">3D Кастом</a>
+      <a href="mystery.html">Секретный конверт</a>
+      <a href="sizer.html">Определитель размера</a>
+      <a href="#about">О нас</a>
+      <a href="#reviews">Отзывы</a>
+    </div>
+  </div>
+
+  <!-- Slide-in Cart Drawer Backdrop & Container -->
+  <div id="cart-backdrop" class="cart-backdrop">
+    <div class="cart-drawer">
+      <div class="cart-header">
+        <div class="cart-header-title">
+          Корзина
+          <span id="cart-header-count" class="cart-items-count-badge">0 шт.</span>
+        </div>
+        <button class="cart-close-btn js-cart-close">×</button>
+      </div>
+
+      <!-- Step 1: Cart Items -->
+      <div id="cart-step-items" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+        <div class="cart-body">
+          <div id="cart-items-container" class="cart-items-list"></div>
+          <div id="cart-empty-state" class="cart-empty-view" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+            </svg>
+            <h3>Ваша корзина пуста</h3>
+            <p>Выберите понравившиеся украшения в нашем каталоге</p>
+            <a href="catalogue.html" class="btn btn-primary btn-sm js-cart-close">Перейти в каталог</a>
+          </div>
+        </div>
+
+        <div id="cart-footer-area" class="cart-footer">
+          <div class="cart-summary-table">
+            <div class="cart-summary-row total">
+              <span>Сумма заказа:</span>
+              <span id="cart-subtotal-val">0 ₽</span>
+            </div>
+            <div style="font-size:0.75rem; color:#888;">Бесплатная доставка от 7 000 ₽</div>
+          </div>
+          <button id="btn-go-to-checkout" class="btn btn-primary cart-checkout-btn">Оформить заказ</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Checkout Form -->
+      <div id="cart-step-checkout" class="checkout-view" style="display:none;">
+        <div class="cart-body">
+          <button id="btn-back-to-cart" class="btn btn-secondary btn-sm" style="margin-bottom:16px;">
+            ← Вернуться к товарам
+          </button>
+          
+          <form id="checkout-order-form">
+            <div class="form-group">
+              <label class="form-label">Ваше Имя *</label>
+              <input type="text" id="order-name" class="form-input" placeholder="Иван Иванов" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Номер телефона *</label>
+              <input type="tel" id="order-phone" class="form-input" placeholder="+7 (999) 000-00-00" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Email для чека</label>
+              <input type="email" id="order-email" class="form-input" placeholder="mail@example.com">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Способ доставки</label>
+              <div class="delivery-options">
+                <div class="delivery-option-card selected" data-method="cdek_pvz" data-price="350">
+                  <strong>СДЭК (ПВЗ)</strong>
+                  <div style="font-size:0.75rem; color:#666;">350 ₽ (2-4 дня)</div>
+                </div>
+                <div class="delivery-option-card" data-method="cdek_courier" data-price="550">
+                  <strong>СДЭК (Курьер)</strong>
+                  <div style="font-size:0.75rem; color:#666;">550 ₽ (курьером в руки)</div>
+                </div>
+                <div class="delivery-option-card" data-method="post" data-price="390">
+                  <strong>Почта России</strong>
+                  <div style="font-size:0.75rem; color:#666;">390 ₽ (по всей РФ)</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Город и адрес доставки / пункт выдачи *</label>
+              <input type="text" id="order-address" class="form-input" placeholder="г. Москва, ул. Ленина, д. 5 (или адрес ПВЗ)" required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Комментарий к заказу</label>
+              <textarea id="order-comment" class="form-textarea" rows="2" placeholder="Пожелания по доставке, звонку или упаковке"></textarea>
+            </div>
+
+            <div class="cart-summary-table" style="margin-top:20px;">
+              <div class="cart-summary-row">
+                <span>Товары:</span>
+                <span id="checkout-subtotal">0 ₽</span>
+              </div>
+              <div class="cart-summary-row">
+                <span>Доставка:</span>
+                <span id="checkout-delivery">350 ₽</span>
+              </div>
+              <div class="cart-summary-row total">
+                <span>Итого:</span>
+                <span id="checkout-total">0 ₽</span>
+              </div>
+            </div>
+
+            <button type="submit" id="btn-submit-order" class="btn btn-primary" style="width:100%; padding:16px; margin-top:14px;">
+              Подтвердить заказ
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Detail Modal Popup -->
+  <div id="product-modal-backdrop" class="product-modal-backdrop">
+    <div class="product-modal-container">
+      <button id="product-modal-close-btn" class="product-modal-close" title="Закрыть">×</button>
+      
+      <div class="product-modal-grid">
+        <div class="modal-gallery">
+          <div class="modal-main-image">
+            <img id="modal-main-img" src="assets/placeholder.jpg" alt="Изделие">
+          </div>
+          <div id="modal-thumbs-container" class="modal-thumbs"></div>
+        </div>
+
+        <div class="modal-details">
+          <div id="modal-product-cat" class="modal-category">Кольцо</div>
+          <h2 id="modal-product-title" class="modal-title">Название изделия</h2>
+
+          <div class="modal-pricing">
+            <span id="modal-product-price" class="modal-price-current">0 ₽</span>
+            <span id="modal-product-old-price" class="modal-price-old" style="display:none;">0 ₽</span>
+          </div>
+
+          <div id="modal-sizes-group" class="modal-option-group">
+            <div class="modal-option-title">
+              <span>Выберите размер:</span>
+              <a href="sizer.html" class="modal-size-guide-link" target="_blank">Определить размер</a>
+            </div>
+            <div id="modal-sizes-list" class="modal-sizes-list"></div>
+          </div>
+
+          <div class="modal-actions-row">
+            <div class="qty-control">
+              <button id="modal-qty-minus" class="qty-btn">−</button>
+              <input id="modal-qty-val" class="qty-input" value="1" readonly>
+              <button id="modal-qty-plus" class="qty-btn">+</button>
+            </div>
+            <button id="modal-btn-add-cart" class="btn btn-primary btn-modal-add">
+              Добавить в корзину
+            </button>
+          </div>
+
+          <div id="modal-specs-container" class="modal-specs-list"></div>
+
+          <div id="modal-product-desc" class="modal-description"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Order Success Modal -->
+  <div id="order-success-modal" class="order-success-modal">
+    <div class="order-success-card">
+      <div class="order-success-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <h3>Заказ успешно оформлен!</h3>
+      <div id="success-order-number" class="order-success-number">SUPS-0000</div>
+      <p>
+        Спасибо за заказ в САПС! Мы уже получили вашу заявку и отправили уведомление менеджеру. 
+        В ближайшее время мы свяжемся с вами по указанному телефону для подтверждения деталей доставки.
+      </p>
+      <button id="btn-close-success" class="btn btn-primary" style="width:100%;">Отлично</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/cart.js"></script>
+  <script src="js/catalog.js?v=20261005a"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

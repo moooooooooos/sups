@@ -1,0 +1,1211 @@
+/* ==========================================================================
+   SUPS CUSTOMIZER V2 — CAD / Graphic Studio Style Ring Configurator
+   Responsive: Desktop 4-Column CAD Studio & Mobile Stack with Persistent 3D
+   ========================================================================== */
+
+:root {
+  --cad-bg: #1e1e24;
+  --cad-grid-major: rgba(255, 255, 255, 0.12);
+  --cad-grid-minor: rgba(255, 255, 255, 0.04);
+  --cad-ruler-bg: #141418;
+  --cad-ruler-text: #8e8e93;
+  --cad-accent: #0066ff;
+  --cad-accent-hover: #0052cc;
+  --cad-surface: #ffffff;
+  --cad-border: #e2e2e8;
+  --cad-text-main: #111113;
+  --cad-text-muted: #6e6e73;
+  --cad-panel-bg: #f8f8fa;
+  --cad-radius-lg: 16px;
+  --cad-radius-md: 10px;
+  --cad-radius-sm: 6px;
+  --cad-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* Base resets inside customizer */
+.cad-studio-container,
+.cad-studio-container * {
+  box-sizing: border-box !important;
+}
+
+.cad-studio-container {
+  width: 100%;
+  max-width: 1680px;
+  margin: 10px auto 40px auto;
+  font-family: 'Jost', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--cad-text-main);
+  background: #ffffff;
+  border-radius: var(--cad-radius-lg);
+  box-shadow: var(--cad-shadow);
+  border: 1px solid var(--cad-border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* TOP STATUS / MODE BAR */
+.cad-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--cad-border);
+  font-size: 13px;
+}
+.cad-top-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+.cad-top-title span {
+  color: var(--cad-accent);
+}
+.cad-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cad-btn-history {
+  background: #f0f0f4;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--cad-text-main);
+  transition: all 0.15s ease;
+}
+.cad-btn-history:hover:not(:disabled) {
+  background: #e2e2e8;
+  transform: translateY(-1px);
+}
+.cad-btn-history:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* MAIN 4-COLUMN WORKSPACE:
+   Col 1: Toolbar (52px)
+   Col 2: Canvas (1fr)
+   Col 3: Layers + Settings (320px)
+   Col 4: Permanent 3D ring + Ring Specs (340px)
+*/
+.cad-workspace-grid {
+  display: grid;
+  grid-template-columns: 52px 1fr 320px 340px;
+  height: calc(100vh - 120px);
+  min-height: 640px;
+  max-height: 880px;
+  background: #ffffff;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 1. LEFT TOOLBAR: "ТУТ ДОЛЖНЫ БЫТЬ ИНСТРУМЕНТЫ" */
+.cad-left-toolbar {
+  background: #ffffff;
+  border-right: 1px solid var(--cad-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 6px;
+  gap: 8px;
+  z-index: 20;
+}
+.cad-tool-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #444;
+  transition: all 0.15s ease;
+  position: relative;
+}
+.cad-tool-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+}
+.cad-tool-btn:hover {
+  background: #f4f4f7;
+  color: var(--cad-text-main);
+}
+.cad-tool-btn.active {
+  background: #111113;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.cad-tool-btn .cad-tool-tooltip {
+  position: absolute;
+  left: calc(100% + 8px);
+  background: #111113;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 100;
+}
+.cad-tool-btn:hover .cad-tool-tooltip {
+  opacity: 1;
+  transform: translateX(0);
+}
+.cad-toolbar-divider {
+  width: 28px;
+  height: 1px;
+  background: var(--cad-border);
+  margin: 4px 0;
+}
+
+/* 2. MAIN CENTER: "РАБОЧАЯ ОБЛАСТЬ" */
+.cad-canvas-area {
+  display: flex;
+  flex-direction: column;
+  background: #f0f0f3;
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+}
+.cad-area-header {
+  height: 36px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--cad-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #222;
+}
+.cad-canvas-viewport {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: default;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #18181c;
+}
+.cad-canvas-viewport.panning {
+  cursor: grab;
+}
+.cad-canvas-viewport.panning:active {
+  cursor: grabbing;
+}
+
+/* SVG Millimeter Rulers */
+.cad-ruler-corner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 32px;
+  height: 24px;
+  background: #141417;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 15;
+  color: #666;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cad-ruler-top {
+  position: absolute;
+  top: 0;
+  left: 32px;
+  right: 0;
+  height: 24px;
+  background: #141417;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 14;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cad-ruler-left {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  bottom: 0;
+  width: 32px;
+  background: #141417;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 14;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+#cad-editor-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+}
+
+/* Bottom Canvas Bar */
+.cad-canvas-bottom-bar {
+  height: 42px;
+  background: #ffffff;
+  border-top: 1px solid var(--cad-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 16;
+}
+.cad-side-switcher {
+  display: flex;
+  background: #ededf0;
+  border-radius: 8px;
+  padding: 2px;
+  gap: 2px;
+}
+.cad-side-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cad-side-btn.active {
+  background: #ffffff;
+  color: #111;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+.cad-zoom-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cad-zoom-btn {
+  background: #f2f2f5;
+  border: 1px solid #e0e0e6;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #444;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.cad-zoom-btn:hover {
+  background: #e8e8ed;
+  color: #111;
+}
+
+/* 3. MIDDLE COLUMN: "СЛОИ И НАСТРОЙКИ СЛОЯ" (Scrolls independently next to canvas) */
+.cad-layers-column {
+  background: #ffffff;
+  border-right: 1px solid var(--cad-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 10;
+  padding-bottom: 20px;
+}
+.cad-layers-header {
+  padding: 10px 14px;
+  background: #fdfdfd;
+  border-bottom: 1px solid var(--cad-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.cad-layers-list {
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cad-layer-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: #f9f9fb;
+  border: 1px solid #e8e8ed;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 12px;
+  font-weight: 600;
+}
+.cad-layer-card:hover {
+  background: #f0f0f4;
+}
+.cad-layer-card.active {
+  background: #ffffff;
+  border-color: #111113;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.cad-layer-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #777;
+  font-size: 11px;
+  font-weight: 800;
+}
+.cad-layer-card.active .cad-layer-icon {
+  color: #111;
+}
+.cad-layer-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cad-layer-btn-icon {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: 0.15s;
+}
+.cad-layer-btn-icon:hover {
+  color: #111;
+  background: rgba(0,0,0,0.06);
+}
+.cad-layer-btn-icon.hidden-layer {
+  color: #ccc;
+}
+.cad-layers-quick-add {
+  padding: 6px 8px;
+  border-top: 1px solid var(--cad-border);
+  border-bottom: 1px solid var(--cad-border);
+  display: flex;
+  gap: 6px;
+  background: #fafafa;
+}
+.cad-btn-add-layer {
+  flex: 1;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px dashed #ccc;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #333;
+  cursor: pointer;
+  text-align: center;
+  transition: 0.15s;
+}
+.cad-btn-add-layer:hover {
+  border-color: #111;
+  color: #111;
+}
+
+/* Layer settings inspector inside Col 3 */
+.cad-inspector-in-col {
+  margin: 10px 8px 0 8px;
+  border: 1px solid var(--cad-border);
+  border-radius: var(--cad-radius-md);
+  padding: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+/* 4. RIGHT SIDEBAR: "3D МОДЕЛЬ & ПАРАМЕТРЫ ЗАКАЗА"
+   Dedicated & ALWAYS 100% visible, no scrolling needed! */
+.cad-right-sidebar {
+  background: #f9f9fb;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--cad-border);
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* 3D Ring Viewport */
+.cad-3d-box {
+  width: 100%;
+  height: 270px;
+  background: #111113;
+  position: relative;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1), width 0.3s ease;
+}
+.cad-3d-box.expanded-3d {
+  height: 440px !important;
+}
+#cad-three-viewport {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+#cad-three-viewport:active {
+  cursor: grabbing;
+}
+.cad-3d-badge {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  z-index: 10;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+}
+.cad-3d-badge svg {
+  width: 16px;
+  height: 16px;
+}
+.cad-3d-close-btn,
+.cad-3d-expand-badge {
+  display: none;
+}
+.cad-3d-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 10px;
+  pointer-events: none;
+}
+.cad-3d-tools {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  z-index: 10;
+}
+.cad-3d-tool-btn {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: none;
+  color: #fff;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.15s;
+}
+.cad-3d-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Ring Specs Card inside Col 4 */
+.cad-ring-specs-card {
+  margin: 10px;
+  border: 1px solid var(--cad-border);
+  border-radius: var(--cad-radius-md);
+  padding: 12px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.cad-card-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  color: #222;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Form inputs & styling */
+.cad-select {
+  width: 100%;
+  padding: 7px 10px;
+  background: #ffffff;
+  border: 1px solid #dcdce2;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #111;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+}
+.cad-select:focus {
+  border-color: #111;
+}
+
+.cad-input-text {
+  width: 100%;
+  padding: 7px 10px;
+  background: #ffffff;
+  border: 1px solid #dcdce2;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #111;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.cad-input-text:focus {
+  border-color: #111;
+}
+
+#cad-text-input {
+  resize: none !important;
+  height: 52px !important;
+  min-height: 52px !important;
+  max-height: 52px !important;
+}
+
+/* Metal Swatches */
+.cad-swatch-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+.cad-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+.cad-swatch.active {
+  border-color: #111113;
+  transform: scale(1.15);
+}
+.cad-swatch[data-color="silver"] { background: linear-gradient(135deg, #efefef, #d4d4d8); }
+.cad-swatch[data-color="gold"]   { background: linear-gradient(135deg, #ffd700, #d4af37); }
+.cad-swatch[data-color="rose"]   { background: linear-gradient(135deg, #e0a899, #b76e79); }
+.cad-swatch[data-color="black"]  { background: linear-gradient(135deg, #333338, #111113); }
+
+/* RICH TYPOGRAPHY BUTTONS */
+.cad-typo-bar {
+  display: flex;
+  gap: 3px;
+  background: #f0f0f4;
+  padding: 3px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.cad-typo-btn {
+  flex: 1;
+  padding: 5px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  cursor: pointer;
+  transition: 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cad-typo-btn:hover {
+  background: #e2e2e8;
+  color: #111;
+}
+.cad-typo-btn.active {
+  background: #ffffff;
+  color: #111;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Slider with exact numeric input */
+.cad-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+.cad-slider-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #555;
+}
+.cad-slider-val {
+  font-family: monospace;
+  font-size: 10px;
+  background: #f0f0f4;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #111;
+}
+.cad-range {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: #e2e2e8;
+  border-radius: 2px;
+  outline: none;
+}
+.cad-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #111113;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* STICKY FOOTER IN COL 4 (Always in view!) */
+.cad-bottom-checkout {
+  padding: 12px 14px;
+  background: #ffffff;
+  border-top: 1px solid var(--cad-border);
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cad-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.cad-price-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #666;
+}
+.cad-price-total {
+  font-size: 19px;
+  font-weight: 800;
+  color: #111;
+  letter-spacing: -0.5px;
+}
+.cad-btn-buy {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  background: #111113;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+.cad-btn-buy:hover {
+  background: #2a2a30;
+  transform: translateY(-1px);
+}
+
+/* SYMBOLS MODAL */
+.cad-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.cad-modal-card {
+  width: 90%;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+.cad-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.cad-modal-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+}
+.cad-modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #888;
+}
+.cad-symbols-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.cad-symbol-item {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f7f7f9;
+  border: 1px solid #e8e8ed;
+  border-radius: 8px;
+  font-size: 22px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.cad-symbol-item:hover {
+  background: #111113;
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+/* ==========================================================================
+   MOBILE ADAPTATIONS (Under 980px)
+   Matches User Wireframe 1:1:
+   1. STICKY Top: "РАБОЧАЯ ОБЛАСТЬ С ЗУМОМ" (2D unwrap + 3D ring thumbnail in top right corner)
+   2. "РАБОЧАЯ ОБЛАСТЬ" (Side Switcher + Zoom buttons)
+   3. "СЛОИ ГОРИЗОНТАЛЬНО" (Horizontal layer chips)
+   4. "НАСТРОЙКИ СЛОЯ" (Typography, Text input, Sliders)
+   5. "ПАРАМЕТРЫ КОЛЬЦА" (Specs & Watermark checkbox)
+   6. Sticky Bottom Checkout Bar
+   ========================================================================== */
+@media (max-width: 980px) {
+  html, body {
+    overflow-x: clip !important;
+    position: relative;
+  }
+
+  /* Unstick site header on mobile customizer so canvas sticks at top 0 */
+  .site-header {
+    position: relative !important;
+  }
+
+  .cad-studio-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+  }
+
+  /* Hide top studio info bar on mobile to save vertical space */
+  .cad-top-bar {
+    display: none !important;
+  }
+
+  /* Hide left vertical desktop toolbar on mobile (tools are inside layers & canvas) */
+  .cad-left-toolbar {
+    display: none !important;
+  }
+
+  .cad-workspace-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    max-height: none !important;
+    width: 100% !important;
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+  }
+
+  /* -------------------------------------------------------------
+     BLOCK 1: "РАБОЧАЯ ОБЛАСТЬ С ЗУМОМ" (Sticky at top of screen!)
+     Contains 2D canvas with ring unwrap + 3D model in top-right!
+     ------------------------------------------------------------- */
+  .cad-canvas-area {
+    order: 1 !important;
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 100 !important;
+    width: 100% !important;
+    height: 195px !important;
+    min-height: 195px !important;
+    max-height: 195px !important;
+    background: #18181c !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28) !important;
+    overflow: visible !important;
+  }
+
+  .cad-area-header {
+    height: 25px !important;
+    padding: 0 10px !important;
+    background: #111114 !important;
+    color: #9999a4 !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.06em !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .cad-canvas-viewport {
+    position: relative !important;
+    width: 100% !important;
+    height: calc(195px - 25px) !important;
+    overflow: hidden !important;
+    background: #18181c !important;
+  }
+
+  /* 3D Ring Thumbnail in Top-Right Corner of Canvas Viewport */
+  #cad-3d-box {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    width: 88px !important;
+    height: 88px !important;
+    border-radius: 12px !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+    background: #0d0d12 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6) !important;
+    z-index: 35 !important;
+    overflow: hidden !important;
+    cursor: pointer !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  }
+  #cad-3d-box:active {
+    transform: scale(0.96) !important;
+  }
+
+  #cad-three-viewport {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  /* Badge on 3D thumbnail */
+  .cad-3d-badge {
+    position: absolute !important;
+    top: 4px !important;
+    left: 4px !important;
+    font-size: 8px !important;
+    padding: 2px 4px !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    border-radius: 4px !important;
+  }
+  .cad-3d-expand-badge {
+    display: flex !important;
+    align-items: center !important;
+    position: absolute !important;
+    bottom: 4px !important;
+    right: 4px !important;
+    background: rgba(0, 0, 0, 0.65) !important;
+    color: #ffffff !important;
+    font-size: 8px !important;
+    font-weight: 700 !important;
+    padding: 2px 5px !important;
+    border-radius: 4px !important;
+    pointer-events: none !important;
+  }
+
+  .cad-3d-hint {
+    display: none !important;
+  }
+  .cad-3d-tools {
+    display: none !important;
+  }
+  .cad-3d-close-btn {
+    display: none !important;
+  }
+
+  body.cad-3d-fullscreen-active .site-header {
+    display: none !important;
+  }
+
+  /* Fullscreen Modal View when 3D thumbnail is tapped */
+  #cad-3d-box.fullscreen-mobile {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+    background: #0b0b0f !important;
+    z-index: 9999999 !important;
+    box-shadow: none !important;
+  }
+  #cad-3d-box.fullscreen-mobile .cad-3d-expand-badge {
+    display: none !important;
+  }
+  #cad-3d-box.fullscreen-mobile .cad-3d-close-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    position: fixed !important;
+    top: max(16px, env(safe-area-inset-top, 16px)) !important;
+    right: 16px !important;
+    background: #ffffff !important;
+    color: #111113 !important;
+    border: none !important;
+    padding: 9px 18px !important;
+    border-radius: 20px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+    z-index: 10000000 !important;
+    cursor: pointer !important;
+  }
+  #cad-3d-box.fullscreen-mobile .cad-3d-hint {
+    display: block !important;
+    position: absolute !important;
+    bottom: max(24px, env(safe-area-inset-bottom, 24px)) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    color: #888899 !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    width: 90% !important;
+    z-index: 100001 !important;
+    pointer-events: none !important;
+  }
+  #cad-3d-box.fullscreen-mobile .cad-3d-tools {
+    display: flex !important;
+    position: absolute !important;
+    bottom: max(60px, calc(env(safe-area-inset-bottom, 24px) + 36px)) !important;
+    right: 16px !important;
+    z-index: 100001 !important;
+    gap: 8px !important;
+  }
+  #cad-3d-box.fullscreen-mobile #btn-toggle-3d-size {
+    display: none !important;
+  }
+  #cad-3d-box.fullscreen-mobile #btn-toggle-3d-fullscreen {
+    display: none !important;
+  }
+
+  /* -------------------------------------------------------------
+     BLOCK 2: "РАБОЧАЯ ОБЛАСТЬ" (Side Switcher & Zoom Controls)
+     ------------------------------------------------------------- */
+  .cad-canvas-bottom-bar {
+    order: 2 !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 8px 12px !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid var(--cad-border) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    align-items: stretch !important;
+  }
+  .cad-side-switcher {
+    width: 100% !important;
+    display: flex !important;
+    gap: 6px !important;
+  }
+  .cad-side-btn {
+    flex: 1 !important;
+    text-align: center !important;
+    padding: 9px 4px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+  }
+  .cad-zoom-bar {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 4px !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    padding-top: 2px !important;
+  }
+  .cad-zoom-bar span {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    color: #888 !important;
+    margin-right: 4px !important;
+    white-space: nowrap !important;
+  }
+  .cad-zoom-btn {
+    flex: 1 !important;
+    padding: 6px 2px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    border-radius: 6px !important;
+  }
+
+  /* -------------------------------------------------------------
+     BLOCK 3 & 4: "СЛОИ ГОРИЗОНТАЛЬНО" & "НАСТРОЙКИ СЛОЯ"
+     ------------------------------------------------------------- */
+  .cad-layers-column {
+    order: 3 !important;
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--cad-border) !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    padding-bottom: 8px !important;
+  }
+  .cad-layers-header {
+    padding: 10px 14px 4px !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.05em !important;
+  }
+  .cad-layers-list {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    padding: 6px 12px !important;
+    gap: 8px !important;
+    max-height: none !important;
+  }
+  .cad-layer-card {
+    flex-shrink: 0 !important;
+    padding: 8px 12px !important;
+    border-radius: 10px !important;
+  }
+  .cad-layers-quick-add {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px !important;
+    padding: 4px 12px 10px !important;
+  }
+  .cad-btn-add-layer {
+    flex: 1 !important;
+    padding: 8px 6px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+  }
+
+  /* Inspector: "НАСТРОЙКИ СЛОЯ" */
+  .cad-inspector-in-col {
+    margin: 4px 10px 10px !important;
+    padding: 14px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+    border: 1px solid var(--cad-border) !important;
+  }
+  .cad-typo-bar {
+    display: flex !important;
+    gap: 4px !important;
+    margin: 8px 0 !important;
+  }
+  .cad-typo-btn {
+    flex: 1 !important;
+    height: 38px !important;
+    padding: 0 !important;
+  }
+  .cad-slider-row {
+    margin: 10px 0 !important;
+  }
+  .cad-range {
+    height: 24px !important;
+  }
+
+  /* -------------------------------------------------------------
+     BLOCK 5: "ПАРАМЕТРЫ КОЛЬЦА"
+     ------------------------------------------------------------- */
+  .cad-right-sidebar {
+    order: 4 !important;
+    width: 100% !important;
+    border-left: none !important;
+    height: auto !important;
+    background: transparent !important;
+    overflow: visible !important;
+    padding-bottom: 20px !important;
+  }
+  .cad-ring-specs-card {
+    margin: 4px 10px 12px !important;
+    padding: 14px !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+    border: 1px solid var(--cad-border) !important;
+  }
+  .cad-swatch-group {
+    gap: 12px !important;
+  }
+  .cad-swatch {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  /* -------------------------------------------------------------
+     BLOCK 6: Sticky Bottom Checkout Bar
+     ------------------------------------------------------------- */
+  .cad-bottom-checkout {
+    position: sticky !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+    background: #ffffff !important;
+    border-top: 1px solid var(--cad-border) !important;
+    padding: 10px 16px max(12px, env(safe-area-inset-bottom, 12px)) !important;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08) !important;
+  }
+  .cad-btn-buy {
+    padding: 14px !important;
+    font-size: 15px !important;
+    font-weight: 800 !important;
+  }
+}

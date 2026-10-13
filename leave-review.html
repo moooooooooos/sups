@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Оставить отзыв на купленное украшение | САПС</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/cart.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    .star-btn { font-size: 2rem; cursor: pointer; color: #ccc; transition: color 0.15s ease; user-select: none; }
+    .star-btn.active { color: #f59e0b; }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand-logo">
+        САПС
+        <span>STEEL</span>
+      </a>
+
+      <nav class="site-nav">
+        <a href="catalogue.html" class="nav-link">Каталог</a>
+        <a href="rings.html" class="nav-link">Кольца</a>
+        <a href="earrings.html" class="nav-link">Серьги</a>
+        <a href="pendants.html" class="nav-link">Подвески</a>
+        <a href="custom-sups.html" class="nav-link">3D Кастом</a>
+        <a href="#about" class="nav-link">О нас</a>
+        <a href="#reviews" class="nav-link">Отзывы</a>
+        <div class="nav-dropdown-wrap">
+          <button class="nav-dropdown-toggle" type="button">
+            <span>ПОКУПАТЕЛЯМ</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1L5 5L9 1"/></svg>
+          </button>
+          <div class="nav-dropdown-menu">
+            <a href="buyers.html?topic=care" class="nav-dropdown-item" data-buyer-topic="care">Уход за украшениями</a>
+            <a href="buyers.html?topic=delivery" class="nav-dropdown-item" data-buyer-topic="delivery">Доставка и оплата</a>
+            <a href="buyers.html?topic=return" class="nav-dropdown-item" data-buyer-topic="return">Возврат товара</a>
+            <a href="buyers.html?topic=warranty" class="nav-dropdown-item" data-buyer-topic="warranty">Гарантия</a>
+            <a href="buyers.html?topic=faq" class="nav-dropdown-item" data-buyer-topic="faq">Часто задаваемые вопросы</a>
+            <a href="buyers.html?topic=loyalty" class="nav-dropdown-item" data-buyer-topic="loyalty">Программа лояльности</a>
+          </div>
+        </div>
+        <a href="cooperation.html" class="nav-link js-open-cooperation" id="nav-cooperation-link">Сотрудничество</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="cart-toggle-btn js-cart-toggle" title="Корзина">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span class="cart-count-badge" style="display:none;">0</span>
+        </button>
+
+        <button class="mobile-menu-toggle" title="Меню">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Nav Drawer -->
+  <div class="mobile-nav-drawer">
+    <div class="mobile-nav-header">
+      <div class="brand-logo">САПС</div>
+      <button class="mobile-nav-close" style="background:none; border:none; font-size:1.8rem; cursor:pointer;">×</button>
+    </div>
+    <div class="mobile-nav-links">
+      <a href="catalogue.html">Каталог</a>
+      <a href="rings.html">Кольца</a>
+      <a href="earrings.html">Серьги</a>
+      <a href="pendants.html">Подвески</a>
+      <a href="bracelets.html">Браслеты</a>
+      <a href="custom-sups.html">3D Кастом</a>
+      <a href="#about">О нас</a>
+      <a href="#reviews">Отзывы</a>
+      <a href="buyers.html">Покупателям</a>
+      <a href="cooperation.html" class="js-open-cooperation">Сотрудничество</a>
+    </div>
+  </div>
+
+  <main class="container" style="padding: 60px 24px; max-width: 680px;">
+    <h1 class="title-md" style="margin-bottom: 12px; text-align:center;">Оставить отзыв на покупку</h1>
+    <p class="subtitle" style="margin-bottom: 36px; text-align:center;">Отзывы могут оставлять только реальные покупатели на приобретенные украшения САПС</p>
+
+    <!-- NOT LOGGED IN WARNING CARD -->
+    <div id="review-not-logged-in-card" style="display:none; background:#fff; padding:40px; border-radius:16px; border:1px solid var(--border-color); text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+      <div style="font-size:3rem; margin-bottom:12px;">🔒</div>
+      <h2 style="font-size:1.3rem; font-weight:700; margin-bottom:8px;">Требуется авторизация</h2>
+      <p style="color:#666; font-size:0.95rem; line-height:1.5; margin-bottom:24px;">
+        Чтобы опубликовать отзыв, вам необходимо войти в свой личный кабинет. Система загрузит ваши реальные покупки.
+      </p>
+      <a href="account.html" class="btn btn-primary">Войти в Личный Кабинет</a>
+    </div>
+
+    <!-- NO PURCHASES WARNING CARD -->
+    <div id="review-no-purchases-card" style="display:none; background:#fff; padding:40px; border-radius:16px; border:1px solid var(--border-color); text-align:center; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+      <div style="font-size:3rem; margin-bottom:12px;">🛍️</div>
+      <h2 style="font-size:1.3rem; font-weight:700; margin-bottom:8px;">У вас пока нет оформленных заказов</h2>
+      <p style="color:#666; font-size:0.95rem; line-height:1.5; margin-bottom:24px;">
+        Отзывы создаются только для украшений, которые были приобретены в нашем магазине.
+      </p>
+      <a href="catalogue.html" class="btn btn-primary">Перейти к украшениям</a>
+    </div>
+
+    <!-- MAIN REVIEW FORM CARD -->
+    <div id="review-form-card" style="display:none; background:#fff; padding:36px; border-radius:16px; border:1px solid var(--border-color); box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+      <!-- Customer Info Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#f9f9fb; padding:12px 16px; border-radius:10px; margin-bottom:24px; border:1px solid #eee;">
+        <div>
+          <span style="color:#888; font-size:0.8rem;">Вы вошли как:</span>
+          <strong id="customer-name-badge" style="display:block; font-size:0.95rem;">-</strong>
+        </div>
+        <div style="background:#000; color:#fff; padding:4px 10px; border-radius:12px; font-size:0.8rem; font-weight:700;" id="customer-id-badge">
+          SUPS-U0000
+        </div>
+      </div>
+
+      <form id="public-leave-review-form">
+        <div class="form-group" style="margin-bottom:20px;">
+          <label class="form-label">Выберите купленное украшение или заказ *</label>
+          <select id="review-target-select" class="form-select" style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd; background:#fff; font-size:0.95rem;" required>
+            <option value="">Загрузка ваших покупок...</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px;">
+          <label class="form-label">Город (необязательно)</label>
+          <input type="text" id="review-city" class="form-input" placeholder="Санкт-Петербург">
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px;">
+          <label class="form-label">Ваша оценка *</label>
+          <div class="rating-stars-picker" style="display:flex; gap:8px;" id="stars-picker">
+            <span class="star-btn" data-val="1">★</span>
+            <span class="star-btn" data-val="2">★</span>
+            <span class="star-btn" data-val="3">★</span>
+            <span class="star-btn" data-val="4">★</span>
+            <span class="star-btn active" data-val="5">★</span>
+          </div>
+          <input type="hidden" id="review-rating-val" value="5">
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px;">
+          <label class="form-label">Ваш отзыв *</label>
+          <textarea id="review-text" class="form-textarea" rows="4" placeholder="Поделитесь вашими впечатлениями от украшения, качества стали и лазерной гравировки..." required style="width:100%; padding:12px; border-radius:8px; border:1px solid #ddd;"></textarea>
+        </div>
+
+        <!-- Photo Upload Section -->
+        <div class="form-group" style="margin-bottom:24px;">
+          <label class="form-label">Прикрепите фото вашего украшения</label>
+          <div id="review-upload-dropzone" class="upload-dropzone" style="border: 2px dashed #ddd; padding: 20px; text-align: center; border-radius: 12px; cursor: pointer; background: #fafafa;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin:0 auto 6px; color:#888;">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <div style="font-weight:600; font-size:0.85rem;">Нажмите для выбора снимков с телефона или ПК</div>
+            <input type="file" id="review-file-input" multiple accept="image/*" style="display:none;">
+          </div>
+
+          <div id="review-customer-photo-previews" class="image-previews-list" style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;"></div>
+        </div>
+
+        <button type="submit" id="btn-submit-review" class="btn btn-primary" style="width:100%; padding:14px; font-size:1rem;">
+          Опубликовать отзыв
+        </button>
+      </form>
+
+      <div id="review-success-msg" style="display:none; text-align:center; padding: 30px 10px;">
+        <div style="font-size:3rem; margin-bottom:12px;">✨</div>
+        <h3 style="font-size:1.4rem; font-weight:700; margin-bottom:8px;">Спасибо за ваш отзыв!</h3>
+        <p style="color:#666; font-size:0.95rem; line-height:1.5; margin-bottom:24px;">
+          Отзыв успешно сохранен. После модерации он появится в разделе «Отзывы» на сайте.
+        </p>
+        <a href="account.html" class="btn btn-secondary">Вернуться в Личный Кабинет</a>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container" style="text-align:center; color:#888;">
+      © 2026 САПС. Все права защищены.
+    </div>
+  </footer>
+
+  <script>
+    let customerToken = localStorage.getItem('sups_customer_token');
+    let attachedReviewPhotos = [];
+    let currentRating = 5;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const preProdId = urlParams.get('product_id');
+      const preOrderId = urlParams.get('order_id');
+
+      if (!customerToken) {
+        document.getElementById('review-not-logged-in-card').style.display = 'block';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/reviews/my-purchases', {
+          headers: { 'Authorization': `Bearer ${customerToken}` }
+        });
+        if (!res.ok) throw new Error('Unauthorized');
+        const data = await res.json();
+
+        document.getElementById('customer-name-badge').textContent = data.customer.name;
+        document.getElementById('customer-id-badge').textContent = data.customer.user_code;
+
+        const prods = data.purchased_products || [];
+        const orders = data.purchased_orders || [];
+
+        if (prods.length === 0 && orders.length === 0) {
+          document.getElementById('review-no-purchases-card').style.display = 'block';
+          return;
+        }
+
+        document.getElementById('review-form-card').style.display = 'block';
+
+        const selectEl = document.getElementById('review-target-select');
+        let optionsHtml = '<option value="">Выберите купленное украшение...</option>';
+
+        if (prods.length > 0) {
+          optionsHtml += '<optgroup label="Купленные украшения">';
+          prods.forEach(p => {
+            const isSelected = preProdId && parseInt(preProdId) === p.product_id ? 'selected' : '';
+            optionsHtml += `<option value="prod_${p.product_id}" ${isSelected}>${p.title} (Заказ #${p.order_number})</option>`;
+          });
+          optionsHtml += '</optgroup>';
+        }
+
+        if (orders.length > 0) {
+          optionsHtml += '<optgroup label="Общие отзывы на заказ (2+ украшения)">';
+          orders.forEach(o => {
+            const isSelected = preOrderId && parseInt(preOrderId) === o.order_id ? 'selected' : '';
+            optionsHtml += `<option value="order_${o.order_id}" ${isSelected}>📦 Общий отзыв на Заказ #${o.order_number} (${o.summary})</option>`;
+          });
+          optionsHtml += '</optgroup>';
+        }
+
+        selectEl.innerHTML = optionsHtml;
+
+      } catch (err) {
+        document.getElementById('review-not-logged-in-card').style.display = 'block';
+      }
+
+      // Rating star picker
+      const starSpans = document.querySelectorAll('#stars-picker .star-btn');
+      starSpans.forEach(span => {
+        span.addEventListener('click', () => {
+          currentRating = parseInt(span.dataset.val);
+          document.getElementById('review-rating-val').value = currentRating;
+          starSpans.forEach(s => {
+            s.classList.toggle('active', parseInt(s.dataset.val) <= currentRating);
+          });
+        });
+      });
+
+      // Photo upload
+      const dropzone = document.getElementById('review-upload-dropzone');
+      const fileInput = document.getElementById('review-file-input');
+
+      if (dropzone && fileInput) {
+        dropzone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', async () => {
+          if (fileInput.files.length) {
+            const formData = new FormData();
+            for (let i = 0; i < fileInput.files.length; i++) {
+              formData.append('photos', fileInput.files[i]);
+            }
+            try {
+              const res = await fetch('/api/reviews/upload', { method: 'POST', body: formData });
+              const data = await res.json();
+              if (data.urls) {
+                attachedReviewPhotos.push(...data.urls);
+                renderPhotoPreviews();
+              }
+            } catch (e) {
+              alert('Ошибка загрузки фото');
+            }
+          }
+        });
+      }
+
+      function renderPhotoPreviews() {
+        const container = document.getElementById('review-customer-photo-previews');
+        container.innerHTML = attachedReviewPhotos.map((url, i) => `
+          <div style="position:relative; width:64px; height:64px; border-radius:8px; overflow:hidden; border:1px solid #ddd;">
+            <img src="${url}" style="width:100%; height:100%; object-fit:cover;">
+            <button type="button" onclick="removePhoto(${i})" style="position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.6); color:#fff; border:none; width:18px; height:18px; border-radius:50%; font-size:11px; cursor:pointer;">×</button>
+          </div>
+        `).join('');
+      }
+
+      window.removePhoto = (i) => {
+        attachedReviewPhotos.splice(i, 1);
+        renderPhotoPreviews();
+      };
+
+      // Form Submit
+      const form = document.getElementById('public-leave-review-form');
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const targetVal = document.getElementById('review-target-select').value;
+        if (!targetVal) {
+          alert('Пожалуйста, выберите украшение или заказ из ваших покупок');
+          return;
+        }
+
+        let productId = null;
+        let orderId = null;
+
+        if (targetVal.startsWith('prod_')) {
+          productId = parseInt(targetVal.replace('prod_', ''));
+        } else if (targetVal.startsWith('order_')) {
+          orderId = parseInt(targetVal.replace('order_', ''));
+        }
+
+        const city = document.getElementById('review-city').value.trim();
+        const text = document.getElementById('review-text').value.trim();
+        const btn = document.getElementById('btn-submit-review');
+
+        btn.disabled = true;
+        btn.textContent = 'Сохранение...';
+
+        try {
+          const res = await fetch('/api/reviews', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${customerToken}`
+            },
+            body: JSON.stringify({
+              product_id: productId,
+              order_id: orderId,
+              author_name: document.getElementById('customer-name-badge').textContent,
+              city,
+              rating: currentRating,
+              text,
+              photos: attachedReviewPhotos
+            })
+          });
+
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Ошибка сохранения отзыва');
+
+          form.style.display = 'none';
+          document.getElementById('review-success-msg').style.display = 'block';
+        } catch (err) {
+          alert(err.message);
+          btn.disabled = false;
+          btn.textContent = 'Опубликовать отзыв';
+        }
+      });
+    });
+  </script>
+  <script src="js/cart.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

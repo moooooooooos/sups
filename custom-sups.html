@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Конструктор кастомных украшений | САПС</title>
+  <meta name="description" content="Интерактивная CAD-развертка и 3D-конструктор ювелирных колец САПС. Профессиональная лазерная гравировка, точные миллиметровые линейки, слои и типографика.">
+  
+  <!-- Fonts with Cyrillic support -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bad+Script&family=Caveat:wght@600&family=Comfortaa:wght@600;700&family=Cormorant+Garamond:ital,wght@0,600;1,600&family=Courier+Prime:wght@700&family=Jost:ital,wght@0,400;0,600;0,700;0,800;1,600&family=Marck+Script&family=Montserrat:wght@400;600;700;800;900&family=Playfair+Display:ital,wght@0,600;1,600&family=Press+Start+2P&family=Ruslan+Display&family=Russo+One&family=Unbounded:wght@400;600;800;900&display=swap&subset=cyrillic" rel="stylesheet">
+  
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <!-- Base Site Styles -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/cart.css">
+  
+  <!-- Customizer Studio V2 Styles -->
+  <link rel="stylesheet" href="css/customizer-v2.css">
+</head>
+<body style="background: #f7f7f9;">
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="index.html" class="brand-logo">
+        САПС
+        <span>STEEL</span>
+      </a>
+
+      <nav class="site-nav">
+        <a href="catalogue.html" class="nav-link">Каталог</a>
+        <a href="rings.html" class="nav-link">Кольца</a>
+        <a href="earrings.html" class="nav-link">Серьги</a>
+        <a href="pendants.html" class="nav-link">Подвески</a>
+        <a href="custom-sups.html" class="nav-link active">3D Кастом</a>
+        <a href="#about" class="nav-link">О нас</a>
+        <a href="#reviews" class="nav-link">Отзывы</a>
+        <div class="nav-dropdown-wrap">
+          <button class="nav-dropdown-toggle" type="button">
+            <span>ПОКУПАТЕЛЯМ</span>
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1L5 5L9 1"/></svg>
+          </button>
+          <div class="nav-dropdown-menu">
+            <a href="buyers.html?topic=care" class="nav-dropdown-item" data-buyer-topic="care">Уход за украшениями</a>
+            <a href="buyers.html?topic=delivery" class="nav-dropdown-item" data-buyer-topic="delivery">Доставка и оплата</a>
+            <a href="buyers.html?topic=return" class="nav-dropdown-item" data-buyer-topic="return">Возврат товара</a>
+            <a href="buyers.html?topic=warranty" class="nav-dropdown-item" data-buyer-topic="warranty">Гарантия</a>
+            <a href="buyers.html?topic=faq" class="nav-dropdown-item" data-buyer-topic="faq">Часто задаваемые вопросы</a>
+            <a href="buyers.html?topic=loyalty" class="nav-dropdown-item" data-buyer-topic="loyalty">Программа лояльности</a>
+          </div>
+        </div>
+        <a href="cooperation.html" class="nav-link js-open-cooperation" id="nav-cooperation-link">Сотрудничество</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="cart-toggle-btn js-cart-toggle" title="Корзина">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <path d="M16 10a4 4 0 0 1-8 0"></path>
+          </svg>
+          <span class="cart-count-badge" style="display:none;">0</span>
+        </button>
+
+        <button class="mobile-menu-toggle" title="Меню">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Mobile Nav Drawer -->
+  <div class="mobile-nav-drawer">
+    <div class="mobile-nav-header">
+      <div class="brand-logo">САПС</div>
+      <button class="mobile-nav-close" style="background:none; border:none; font-size:1.8rem; cursor:pointer;">×</button>
+    </div>
+    <div class="mobile-nav-links">
+      <a href="catalogue.html">Каталог</a>
+      <a href="rings.html">Кольца</a>
+      <a href="earrings.html">Серьги</a>
+      <a href="pendants.html">Подвески</a>
+      <a href="bracelets.html">Браслеты</a>
+      <a href="custom-sups.html">3D Кастом</a>
+      <a href="#about">О нас</a>
+      <a href="#reviews">Отзывы</a>
+      <a href="buyers.html">Покупателям</a>
+      <a href="cooperation.html" class="js-open-cooperation">Сотрудничество</a>
+    </div>
+  </div>
+  <main class="cad-studio-container">
+    
+    <!-- Top info bar with undo/redo -->
+    <div class="cad-top-bar">
+      <div class="cad-top-title">
+        <span>●</span> Студия кастомизации кольца 1:1
+      </div>
+      <div class="cad-top-actions">
+        <button id="btn-undo" class="cad-btn-history" title="Отменить действие (Ctrl+Z)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
+        </button>
+        <button id="btn-redo" class="cad-btn-history" title="Повторить действие (Ctrl+Y)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"/></svg>
+        </button>
+        <span style="color: #bbb;">|</span>
+        <button id="btn-snap-grid" class="cad-btn-history active" title="Привязка к центру и направляющим">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 4-PART CAD WORKSPACE -->
+    <div class="cad-workspace-grid">
+      
+      <!-- 1. LEFT TOOLBAR: "ТУТ ДОЛЖНЫ БЫТЬ ИНСТРУМЕНТЫ" -->
+      <aside class="cad-left-toolbar">
+        <button class="cad-tool-btn active" id="tool-select" title="Выделение и перемещение">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg>
+          <span class="cad-tool-tooltip">Выделение (V)</span>
+        </button>
+
+        <button class="cad-tool-btn" id="tool-text" title="Добавить надпись">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+          <span class="cad-tool-tooltip">Текст (T)</span>
+        </button>
+
+        <label class="cad-tool-btn" id="tool-upload" title="Загрузить изображение / логотип" style="margin:0;">
+          <input type="file" id="cad-file-upload" accept="image/png, image/jpeg, image/svg+xml" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          <span class="cad-tool-tooltip">Рисунок</span>
+        </label>
+
+        <button class="cad-tool-btn" id="tool-symbols" title="Библиотека символов и рун">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span class="cad-tool-tooltip">Символы</span>
+        </button>
+
+        <div class="cad-toolbar-divider"></div>
+
+        <button class="cad-tool-btn" id="tool-pan" title="Рука (панорамирование холста)">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+          <span class="cad-tool-tooltip">Рука (Пробел)</span>
+        </button>
+
+        <button class="cad-tool-btn" id="tool-zoom-fit" title="Сбросить масштаб">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          <span class="cad-tool-tooltip">По центру</span>
+        </button>
+
+        <button class="cad-tool-btn" id="tool-delete-layer" title="Удалить активный слой" style="margin-top:auto; color: #d32f2f;">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          <span class="cad-tool-tooltip">Удалить слой</span>
+        </button>
+      </aside>
+
+      <!-- 2. MAIN WORKSPACE: "РАБОЧАЯ ОБЛАСТЬ" -->
+      <section class="cad-canvas-area">
+        <div class="cad-area-header">
+          <span>РАБОЧАЯ ОБЛАСТЬ С ЗУМОМ</span>
+          <span id="cad-active-side-label" style="color: #888; font-size: 11px;">Лицевая сторона</span>
+        </div>
+
+        <div class="cad-canvas-viewport" id="cad-canvas-viewport">
+          <!-- Top millimeter ruler -->
+          <div class="cad-ruler-corner">mm</div>
+          <svg class="cad-ruler-top" id="cad-ruler-top"></svg>
+          <svg class="cad-ruler-left" id="cad-ruler-left"></svg>
+
+          <!-- Interactive 2D Canvas Engine -->
+          <canvas id="cad-editor-canvas"></canvas>
+        </div>
+
+        <!-- Canvas bottom controls: Switch Side & Zoom -->
+        <div class="cad-canvas-bottom-bar">
+          <div class="cad-side-switcher">
+            <button class="cad-side-btn active" data-side="out" id="btn-side-out">Лицевая сторона</button>
+            <button class="cad-side-btn" data-side="in" id="btn-side-in">Внутренняя сторона</button>
+          </div>
+
+          <div class="cad-zoom-bar">
+            <span style="font-size: 11px; font-weight: 700; color: #777;">Масштаб:</span>
+            <button class="cad-zoom-btn" data-zoom="0.5">50%</button>
+            <button class="cad-zoom-btn" data-zoom="0.8">80%</button>
+            <button class="cad-zoom-btn active" data-zoom="1.0">100%</button>
+            <button class="cad-zoom-btn" data-zoom="1.5">150%</button>
+            <button class="cad-zoom-btn" data-zoom="2.0">200%</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. MIDDLE COLUMN: "СЛОИ И НАСТРОЙКИ СЛОЯ" (Moved here so 3D model is never obscured!) -->
+      <aside class="cad-layers-column">
+        
+        <!-- Верх: Стек слоев -->
+        <div class="cad-layers-header">
+          <span>СЛОИ</span>
+          <span id="cad-layers-count" style="color: #888; font-size: 11px;">0</span>
+        </div>
+
+        <div class="cad-layers-list" id="cad-layers-list">
+          <!-- Dynamically generated layer items -->
+        </div>
+
+        <div class="cad-layers-quick-add">
+          <button class="cad-btn-add-layer" id="btn-add-text-quick">+ Текст</button>
+          <label class="cad-btn-add-layer" style="margin: 0; cursor: pointer;">
+            + Рисунок
+            <input type="file" id="cad-file-upload-quick" accept="image/png, image/jpeg, image/svg+xml" style="display:none;">
+          </label>
+          <button class="cad-btn-add-layer" id="btn-add-symbol-quick">+ Символ</button>
+        </div>
+
+        <!-- Низ: Настройки выбранного слоя & Типографика -->
+        <div class="cad-card cad-inspector-in-col" id="cad-inspector-panel">
+          <div class="cad-card-title">
+            <span id="cad-inspector-title">Настройки текста</span>
+            <button id="cad-btn-duplicate" style="background:none; border:none; font-size:11px; font-weight:700; color:var(--cad-accent); cursor:pointer;">Копия</button>
+          </div>
+
+          <!-- Panel for Text Layers -->
+          <div id="cad-text-settings">
+            <div style="margin-bottom: 8px;">
+              <label style="font-size: 11px; font-weight: 700; color: #555;">Текст гравировки:</label>
+              <textarea id="cad-text-input" class="cad-input-text" rows="2" placeholder="Введите ваш текст..."></textarea>
+            </div>
+
+            <div style="margin-bottom: 8px;">
+              <label style="font-size: 11px; font-weight: 700; color: #555;">Шрифт:</label>
+              <select id="cad-text-font" class="cad-select">
+                <option value="Jost">Jost (Минимализм)</option>
+                <option value="Montserrat">Montserrat (Современный)</option>
+                <option value="Unbounded">Unbounded (Футуризм)</option>
+                <option value="Cormorant Garamond">Cormorant Garamond (Классика)</option>
+                <option value="Russo One">Russo One (Геометричный)</option>
+                <option value="Playfair Display">Playfair Display (Премиум)</option>
+                <option value="Caveat">Caveat (Рукописный живой)</option>
+                <option value="Bad Script">Bad Script (Элегантная каллиграфия)</option>
+                <option value="Marck Script">Marck Script (Винтажное перо)</option>
+                <option value="Courier Prime">Courier Prime (Печатная машинка)</option>
+                <option value="Press Start 2P">Press Start 2P (Ретро пиксели)</option>
+                <option value="Ruslan Display">Ruslan Display (Готика)</option>
+              </select>
+            </div>
+
+            <!-- Rich Typography Controls: Bold, Italic, Uppercase, Alignment -->
+            <div class="cad-typo-bar">
+              <button class="cad-typo-btn" id="typo-bold" title="Полужирный (Bold)"><b>B</b></button>
+              <button class="cad-typo-btn" id="typo-italic" title="Курсив (Italic)"><i>I</i></button>
+              <button class="cad-typo-btn" id="typo-upper" title="ВСЕ ЗАГЛАВНЫЕ">AA</button>
+              <button class="cad-typo-btn active" id="typo-align-left" title="По левому краю">⇤</button>
+              <button class="cad-typo-btn" id="typo-align-center" title="По центру">≡</button>
+              <button class="cad-typo-btn" id="typo-align-right" title="По правому краю">⇥</button>
+            </div>
+
+            <!-- Typography Sliders: Letter-spacing, Line-spacing, Font-size -->
+            <div class="cad-slider-row">
+              <div class="cad-slider-head">
+                <span>Размер шрифта</span>
+                <span class="cad-slider-val" id="val-font-size">8 pt</span>
+              </div>
+              <input type="range" class="cad-range" id="slider-font-size" min="5" max="30" value="8">
+            </div>
+
+            <div class="cad-slider-row">
+              <div class="cad-slider-head">
+                <span>Межбуквенный интервал (трекинг)</span>
+                <span class="cad-slider-val" id="val-letter-spacing">0 px</span>
+              </div>
+              <input type="range" class="cad-range" id="slider-letter-spacing" min="-4" max="30" value="0">
+            </div>
+
+            <div class="cad-slider-row">
+              <div class="cad-slider-head">
+                <span>Отступ строк (высота)</span>
+                <span class="cad-slider-val" id="val-line-height">1.2</span>
+              </div>
+              <input type="range" class="cad-range" id="slider-line-height" min="0.8" max="2.2" step="0.1" value="1.2">
+            </div>
+
+            <!-- Advanced options: Curved Arc & Stroke outline -->
+            <div style="display: flex; gap: 12px; margin: 8px 0; flex-wrap: wrap;">
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                <input type="checkbox" id="cad-toggle-arc" style="accent-color: #111;"> Текст по дуге
+              </label>
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                <input type="checkbox" id="cad-toggle-stroke" style="accent-color: #111;"> Контур / обводка
+              </label>
+            </div>
+
+            <div class="cad-slider-row" id="group-arc-radius" style="display: none;">
+              <div class="cad-slider-head">
+                <span>Радиус изгиба дуги</span>
+                <span class="cad-slider-val" id="val-arc-radius">60</span>
+              </div>
+              <input type="range" class="cad-range" id="slider-arc-radius" min="15" max="200" value="60">
+            </div>
+
+            <div class="cad-slider-row" id="group-stroke-width" style="display: none;">
+              <div class="cad-slider-head">
+                <span>Толщина контура</span>
+                <span class="cad-slider-val" id="val-stroke-width">2 px</span>
+              </div>
+              <input type="range" class="cad-range" id="slider-stroke-width" min="1" max="10" value="2">
+            </div>
+
+            <div class="cad-slider-row">
+              <div class="cad-slider-head">
+                <span>Угол поворота</span>
+                <span class="cad-slider-val" id="val-rotation">0°</span>
+              </div>
+              <input type="range" class="cad-range" id="slider-rotation" min="0" max="360" value="0">
+            </div>
+          </div>
+
+          <!-- Panel for Image Layers -->
+          <div id="cad-image-settings" style="display: none;">
+            <div class="cad-slider-row">
+              <div class="cad-slider-head">
+                <span>Масштаб изображения</span>
+                <span class="cad-slider-val" id="val-img-scale">1.0x</span>
+              </div>
+              <input type="range" class="cad-range" id="slider-img-scale" min="0.2" max="3.0" step="0.05" value="1.0">
+            </div>
+
+            <div class="cad-slider-row">
+              <div class="cad-slider-head">
+                <span>Угол поворота</span>
+                <span class="cad-slider-val" id="val-img-rot">0°</span>
+              </div>
+              <input type="range" class="cad-range" id="slider-img-rot" min="0" max="360" value="0">
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 8px;">
+              <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                <input type="checkbox" id="cad-img-flip" style="accent-color: #111;"> Отзеркалить
+              </label>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 4. RIGHT SIDEBAR: "3D КОЛЬЦО & КОНСТРУКТОР" (Always 100% visible, no scrollbar!) -->
+      <aside class="cad-right-sidebar">
+        
+        <!-- 3D Ring Viewport: Always Pinned at top -->
+        <div class="cad-3d-box" id="cad-3d-box">
+          <div class="cad-3d-badge">
+            <svg viewBox="0 0 100 156" fill="none" stroke="white" stroke-width="7">
+              <path d="M 50 2 L 6.6 81.8 L 12.8 93.6 L 2 105.4 L 50 154 L 98 105.4 L 87.2 93.6 L 93.4 81.8 Z" />
+            </svg>
+            sups 3d
+          </div>
+          <button class="cad-3d-close-btn" id="btn-close-3d-fullscreen" title="Закрыть 3D">✕ Закрыть</button>
+          <div class="cad-3d-expand-badge" id="cad-3d-expand-badge">⛶ 3D</div>
+          <div id="cad-three-viewport"></div>
+          <div class="cad-3d-hint">Вращайте кольцо пальцем / мышкой</div>
+          <div class="cad-3d-tools">
+            <button class="cad-3d-tool-btn" id="btn-toggle-3d-size" title="Увеличить / уменьшить окно 3D">↕ Увеличить 3D</button>
+            <button class="cad-3d-tool-btn" id="btn-toggle-3d-fullscreen" title="На весь экран">⛶</button>
+            <button class="cad-3d-tool-btn" id="btn-reset-3d-cam" title="Сбросить ракурс">↺</button>
+          </div>
+        </div>
+
+        <!-- Section: Конструктор кольца -->
+        <div class="cad-card cad-ring-specs-card">
+          <div class="cad-card-title">Параметры кольца</div>
+          
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div>
+              <label style="font-size: 11px; font-weight: 700; color: #555;">Модель кольца:</label>
+              <select id="cad-ring-model" class="cad-select">
+                <option value="ring_flat_6" selected>Кольцо Плоское (6 мм) — от 8 500 ₽</option>
+                <option value="ring_classic_4">Кольцо Классическое (4 мм) — от 7 900 ₽</option>
+                <option value="ring_wide_8">Кольцо Широкое (8 мм) — от 9 200 ₽</option>
+              </select>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+              <div>
+                <div style="font-size: 11px; font-weight: 700; color: #555;">Металл:</div>
+                <div class="cad-swatch-group">
+                  <div class="cad-swatch active" data-color="silver" title="Нержавеющая сталь AISI 304 (серебро)"></div>
+                  <div class="cad-swatch" data-color="gold" title="Золотое покрытие 18K"></div>
+                  <div class="cad-swatch" data-color="rose" title="Розовое золото"></div>
+                  <div class="cad-swatch" data-color="black" title="Черный PVD"></div>
+                </div>
+              </div>
+
+              <div style="width: 110px;">
+                <div style="font-size: 11px; font-weight: 700; color: #555;">Размер:</div>
+                <select id="cad-ring-size" class="cad-select">
+                  <option value="15.5">15.5 р-р</option>
+                  <option value="16.0">16.0 р-р</option>
+                  <option value="16.5" selected>16.5 р-р</option>
+                  <option value="17.0">17.0 р-р</option>
+                  <option value="17.5">17.5 р-р</option>
+                  <option value="18.0">18.0 р-р</option>
+                  <option value="18.5">18.5 р-р</option>
+                  <option value="19.0">19.0 р-р</option>
+                  <option value="19.5">19.5 р-р</option>
+                  <option value="20.0">20.0 р-р</option>
+                  <option value="20.5">20.5 р-р</option>
+                  <option value="21.0">21.0 р-р</option>
+                  <option value="21.5">21.5 р-р</option>
+                  <option value="22.0">22.0 р-р</option>
+                </select>
+              </div>
+            </div>
+
+            <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 11px; font-weight: 700; cursor: pointer; color: #222; margin-top: 4px; padding: 6px; background: #f2f2f5; border-radius: 6px;">
+              <input type="checkbox" id="cad-watermark-toggle" style="width: 14px; height: 14px; accent-color: #111; margin-top: 2px;">
+              <span>Убрать лого САПС внутри (+500 ₽ для своего дизайна)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Sticky Bottom Checkout Bar (Always visible in Col 4) -->
+        <div class="cad-bottom-checkout">
+          <div class="cad-price-row">
+            <span class="cad-price-label">Итого:</span>
+            <span class="cad-price-total" id="cad-total-price">8 500 ₽</span>
+          </div>
+          <button class="cad-btn-buy" id="btn-add-to-cart">Добавить в корзину</button>
+        </div>
+
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- Symbols Modal / Popover -->
+  <div class="cad-modal-backdrop" id="cad-symbols-modal">
+    <div class="cad-modal-card">
+      <div class="cad-modal-head">
+        <h3>Библиотека символов и рун</h3>
+        <button class="cad-modal-close" id="btn-close-symbols">&times;</button>
+      </div>
+      <div class="cad-symbols-grid" id="cad-symbols-grid">
+        <!-- Injected symbols list -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Cart Backdrop & Drawer (SupsCart integration) -->
+  <div id="cart-backdrop" class="cart-backdrop">
+    <div class="cart-drawer">
+      <div class="cart-header">
+        <div class="cart-header-title">
+          Корзина
+          <span id="cart-header-count" class="cart-items-count-badge">0 шт.</span>
+        </div>
+        <button class="cart-close-btn js-cart-close">&times;</button>
+      </div>
+
+      <div id="cart-step-items" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+        <div class="cart-body">
+          <div id="cart-items-container" class="cart-items-list"></div>
+          <div id="cart-empty-state" class="cart-empty-view" style="display:none;">
+            <h3>Ваша корзина пуста</h3>
+          </div>
+        </div>
+
+        <div id="cart-footer-area" class="cart-footer">
+          <div class="cart-summary-table">
+            <div class="cart-summary-row total">
+              <span>Сумма заказа:</span>
+              <span id="cart-subtotal-val">0 ₽</span>
+            </div>
+          </div>
+          <button id="btn-go-to-checkout" class="btn btn-primary cart-checkout-btn">Оформить заказ</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/cart.js"></script>
+  <script src="js/customizer.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
