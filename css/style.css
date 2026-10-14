@@ -344,7 +344,7 @@ img {
 }
 
 .marquee-container:hover .marquee-content {
-  animation-play-state: paused;
+  animation-play-state: running;
 }
 
 .marquee-item {
