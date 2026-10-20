@@ -135,6 +135,8 @@ let loadedCollectionsList = [];
 
 let currentModalProduct = null;
 let selectedModalSize = null;
+let selectedModalColor = null;
+let modalColorVariants = [];
 let modalQuantity = 1;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -785,12 +787,15 @@ function initProductModal() {
         return;
       }
 
+      const pickedColor = modalColorVariants.find(v => v.id === selectedModalColor);
+
       window.cart.addItem({
         id: currentModalProduct.id,
         title: currentModalProduct.title,
         price: currentModalProduct.price,
-        image: (currentModalProduct.images && currentModalProduct.images[0]) || '',
+        image: (pickedColor && pickedColor.images[0]) || (currentModalProduct.images && currentModalProduct.images[0]) || '',
         size: selectedModalSize || '',
+        color: pickedColor ? pickedColor.name : '',
         quantity: modalQuantity
       });
 
@@ -871,26 +876,12 @@ async function openProductModal(productId) {
       `).join('');
     }
 
-    // Gallery
-    const mainImgEl = document.getElementById('modal-main-img');
-    const thumbsContainer = document.getElementById('modal-thumbs-container');
-    const images = (currentModalProduct.images && currentModalProduct.images.length > 0) ? currentModalProduct.images : ['assets/placeholder.jpg'];
-
-    if (mainImgEl) mainImgEl.src = images[0];
-    if (thumbsContainer) {
-      thumbsContainer.scrollLeft = 0;
-      if (images.length > 1) {
-        thumbsContainer.style.display = 'flex';
-        thumbsContainer.innerHTML = images.map((src, i) => `
-          <div class="modal-thumb ${i === 0 ? 'active' : ''}" onclick="switchModalImage('${src}', this)">
-            <img src="${src}" alt="Фото ${i+1}" loading="lazy">
-          </div>
-        `).join('');
-      } else {
-        thumbsContainer.style.display = 'none';
-        thumbsContainer.innerHTML = '';
-      }
-    }
+    // Colors + Gallery
+    // Если у товара размечены цвета, альбом показывает только фото выбранного цвета.
+    selectedModalColor = null;
+    modalColorVariants = getColorVariants(currentModalProduct);
+    renderModalColors();
+    renderModalGallery(getModalImages());
 
     // Sizes
     const sizesGroup = document.getElementById('modal-sizes-group');
@@ -921,6 +912,102 @@ async function openProductModal(productId) {
   }
 }
 
+/**
+ * Цветовые варианты товара: product.color_variants = [
+ *   { id: 'pink', name: 'Розовое золото', hex: '#E8B4B8', images: [0, 1, 2] }
+ * ]
+ * images: индексы (с нуля) фото из product.images, относящихся к этому цвету.
+ * Варианты без фото отбрасываются: переключать там нечего.
+ */
+function getColorVariants(product) {
+  const all = Array.isArray(product.images) ? product.images : [];
+  const raw = Array.isArray(product.color_variants) ? product.color_variants : [];
+  return raw
+    .map(v => ({
+      id: String(v.id || v.name || ''),
+      name: v.name || v.id || '',
+      hex: v.hex || '#cccccc',
+      images: (Array.isArray(v.images) ? v.images : [])
+        .map(i => all[i])
+        .filter(Boolean)
+    }))
+    .filter(v => v.id && v.images.length > 0);
+}
+
+// Фото для текущего выбора: выбранный цвет, иначе весь альбом товара
+function getModalImages() {
+  const selected = modalColorVariants.find(v => v.id === selectedModalColor);
+  if (selected) return selected.images;
+  const all = currentModalProduct.images || [];
+  return all.length > 0 ? all : ['assets/placeholder.jpg'];
+}
+
+function renderModalColors() {
+  const group = document.getElementById('modal-colors-group');
+  const list = document.getElementById('modal-colors-list');
+  if (!group || !list) return;
+
+  if (modalColorVariants.length === 0) {
+    group.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+
+  // Цвет выбран сразу (первый), чтобы альбом никогда не смешивал цвета
+  selectedModalColor = modalColorVariants[0].id;
+  group.style.display = 'block';
+  list.innerHTML = modalColorVariants.map(v => `
+    <button type="button" class="modal-color-btn ${v.id === selectedModalColor ? 'active' : ''}"
+            data-color="${escapeAttr(v.id)}" title="${escapeAttr(v.name)}" aria-label="${escapeAttr(v.name)}"
+            onclick="selectModalColor('${escapeAttr(v.id)}', this)">
+      <span class="modal-color-dot" style="background:${escapeAttr(v.hex)}"></span>
+      <span class="modal-color-label">${escapeAttr(v.name)}</span>
+    </button>
+  `).join('');
+  updateModalColorName();
+}
+
+function updateModalColorName() {
+  const nameEl = document.getElementById('modal-color-name');
+  const selected = modalColorVariants.find(v => v.id === selectedModalColor);
+  if (nameEl) nameEl.textContent = selected ? selected.name : '';
+}
+
+function renderModalGallery(images) {
+  const mainImgEl = document.getElementById('modal-main-img');
+  const thumbsContainer = document.getElementById('modal-thumbs-container');
+
+  if (mainImgEl) mainImgEl.src = images[0];
+  if (thumbsContainer) {
+    thumbsContainer.scrollLeft = 0;
+    if (images.length > 1) {
+      thumbsContainer.style.display = 'flex';
+      thumbsContainer.innerHTML = images.map((src, i) => `
+        <div class="modal-thumb ${i === 0 ? 'active' : ''}" onclick="switchModalImage('${escapeAttr(src)}', this)">
+          <img src="${escapeAttr(src)}" alt="Фото ${i + 1}" loading="lazy">
+        </div>
+      `).join('');
+    } else {
+      thumbsContainer.style.display = 'none';
+      thumbsContainer.innerHTML = '';
+    }
+  }
+}
+
+function escapeAttr(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
+function selectModalColor(colorId, btnEl) {
+  selectedModalColor = colorId;
+  document.querySelectorAll('.modal-color-btn').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  updateModalColorName();
+  renderModalGallery(getModalImages());
+}
+
 function switchModalImage(src, thumbEl) {
   const mainImg = document.getElementById('modal-main-img');
   if (mainImg) mainImg.src = src;
@@ -947,6 +1034,7 @@ function closeProductModal() {
 
 // Make functions available globally for inline onclick
 window.switchModalImage = switchModalImage;
+window.selectModalColor = selectModalColor;
 window.selectModalSize = selectModalSize;
 window.openProductModal = openProductModal;
 window.resetFilters = resetFilters;

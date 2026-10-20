@@ -15,6 +15,7 @@ function parseProduct(p) {
     collections: typeof p.collections === 'string' ? JSON.parse(p.collections || '[]') : p.collections,
     images: typeof p.images === 'string' ? JSON.parse(p.images || '[]') : p.images,
     sizes: typeof p.sizes === 'string' ? JSON.parse(p.sizes || '[]') : p.sizes,
+    color_variants: typeof p.color_variants === 'string' ? JSON.parse(p.color_variants || '[]') : (p.color_variants || []),
     characteristics: typeof p.characteristics === 'string' ? JSON.parse(p.characteristics || '[]') : p.characteristics
   };
 }
@@ -170,6 +171,7 @@ router.post('/products', (req, res) => {
       characteristics = [],
       images = [],
       sizes = [],
+      color_variants = [],
       in_stock = 1,
       is_bestseller = 0,
       sort_order = 0
@@ -185,10 +187,10 @@ router.post('/products', (req, res) => {
     const stmt = db.prepare(`
       INSERT INTO products (
         uid, title, sku, category, collections, price, price_old,
-        description, characteristics, images, sizes, in_stock, is_bestseller, sort_order
+        description, characteristics, images, sizes, color_variants, in_stock, is_bestseller, sort_order
       ) VALUES (
         @uid, @title, @sku, @category, @collections, @price, @price_old,
-        @description, @characteristics, @images, @sizes, @in_stock, @is_bestseller, @sort_order
+        @description, @characteristics, @images, @sizes, @color_variants, @in_stock, @is_bestseller, @sort_order
       )
     `);
 
@@ -204,6 +206,7 @@ router.post('/products', (req, res) => {
       characteristics: JSON.stringify(characteristics || []),
       images: JSON.stringify(images || []),
       sizes: JSON.stringify(sizes || []),
+      color_variants: JSON.stringify(Array.isArray(color_variants) ? color_variants : []),
       in_stock: in_stock ? 1 : 0,
       is_bestseller: is_bestseller ? 1 : 0,
       sort_order: parseInt(sort_order) || 0
@@ -232,6 +235,7 @@ router.put('/products/:id', (req, res) => {
       characteristics,
       images,
       sizes,
+      color_variants,
       in_stock,
       is_bestseller,
       sort_order
@@ -254,6 +258,7 @@ router.put('/products/:id', (req, res) => {
         characteristics = @characteristics,
         images = @images,
         sizes = @sizes,
+        color_variants = @color_variants,
         in_stock = @in_stock,
         is_bestseller = @is_bestseller,
         sort_order = @sort_order,
@@ -273,6 +278,7 @@ router.put('/products/:id', (req, res) => {
       characteristics: JSON.stringify(characteristics !== undefined ? characteristics : JSON.parse(existing.characteristics || '[]')),
       images: JSON.stringify(images !== undefined ? images : JSON.parse(existing.images || '[]')),
       sizes: JSON.stringify(sizes !== undefined ? sizes : JSON.parse(existing.sizes || '[]')),
+      color_variants: JSON.stringify(color_variants !== undefined ? (Array.isArray(color_variants) ? color_variants : []) : JSON.parse(existing.color_variants || '[]')),
       in_stock: in_stock !== undefined ? (in_stock ? 1 : 0) : existing.in_stock,
       is_bestseller: is_bestseller !== undefined ? (is_bestseller ? 1 : 0) : existing.is_bestseller,
       sort_order: sort_order !== undefined ? parseInt(sort_order) : existing.sort_order

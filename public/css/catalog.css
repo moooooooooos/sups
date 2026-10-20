@@ -1170,3 +1170,42 @@
   }
 }
 
+
+/* Color selector in product modal */
+.modal-colors-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.modal-color-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 14px 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: #ffffff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.modal-color-btn:hover {
+  border-color: #000000;
+}
+
+.modal-color-btn.active {
+  border-color: #000000;
+  box-shadow: inset 0 0 0 1px #000000;
+}
+
+.modal-color-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  flex-shrink: 0;
+}

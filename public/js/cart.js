@@ -35,11 +35,13 @@ class SupsCart {
   addItem(item) {
     const qty = parseInt(item.quantity) || 1;
     const size = item.size || '';
+    const color = item.color || '';
     const isCustom = !!item.is_custom;
 
-    const existingIdx = this.items.findIndex(i => 
-      i.id === item.id && 
-      (i.size || '') === size && 
+    const existingIdx = this.items.findIndex(i =>
+      i.id === item.id &&
+      (i.size || '') === size &&
+      (i.color || '') === color &&
       !i.is_custom && 
       !isCustom
     );
@@ -53,6 +55,7 @@ class SupsCart {
         price: parseFloat(item.price) || 0,
         image: item.image || (item.images && item.images[0]) || '',
         size: size,
+        color: color,
         is_custom: isCustom,
         custom_details: item.custom_details || null,
         quantity: qty
@@ -293,6 +296,7 @@ class SupsCart {
           <div>
             <div class="cart-item-title">${item.title}</div>
             ${item.size ? `<div class="cart-item-options">Размер: <b>${item.size}</b></div>` : ''}
+            ${item.color ? `<div class="cart-item-options">Цвет: <b>${item.color}</b></div>` : ''}
             ${item.is_custom ? `<div class="cart-item-custom-badge">Кастомная гравировка</div>` : ''}
           </div>
           <div class="cart-item-bottom">

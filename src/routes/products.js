@@ -10,6 +10,7 @@ function parseProduct(p) {
     collections: typeof p.collections === 'string' ? JSON.parse(p.collections || '[]') : p.collections,
     images: typeof p.images === 'string' ? JSON.parse(p.images || '[]') : p.images,
     sizes: typeof p.sizes === 'string' ? JSON.parse(p.sizes || '[]') : p.sizes,
+    color_variants: typeof p.color_variants === 'string' ? JSON.parse(p.color_variants || '[]') : (p.color_variants || []),
     characteristics: typeof p.characteristics === 'string' ? JSON.parse(p.characteristics || '[]') : p.characteristics
   };
 }

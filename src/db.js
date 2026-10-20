@@ -128,6 +128,7 @@ try { db.exec("ALTER TABLE orders ADD COLUMN payment_method TEXT DEFAULT 'yookas
 try { db.exec("ALTER TABLE orders ADD COLUMN payment_id TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE orders ADD COLUMN payment_status TEXT DEFAULT 'pending';"); } catch (e) {}
 try { db.exec("ALTER TABLE orders ADD COLUMN paid_at TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE products ADD COLUMN color_variants TEXT DEFAULT '[]';"); } catch (e) {}
 try { db.exec("ALTER TABLE reviews ADD COLUMN customer_id INTEGER;"); } catch (e) {}
 try { db.exec("ALTER TABLE reviews ADD COLUMN order_id INTEGER;"); } catch (e) {}
 try { db.exec("ALTER TABLE customers ADD COLUMN birthdate TEXT;"); } catch (e) {}
