@@ -272,7 +272,9 @@
 .checkout-view {
   display: none;
   flex-direction: column;
-  height: 100%;
+  /* Занимает место под шапкой корзины: с height: 100% низ формы с кнопкой уходил за экран */
+  flex: 1;
+  min-height: 0;
 }
 
 .checkout-view.active {

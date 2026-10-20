@@ -4,7 +4,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sups_super_secret_jwt_key_2026';
+const { getSecret } = require('../services/secrets');
+
+const JWT_SECRET = getSecret('admin_jwt', 'JWT_SECRET');
 
 // Admin Login
 router.post('/login', (req, res) => {

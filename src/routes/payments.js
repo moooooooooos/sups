@@ -72,6 +72,34 @@ router.post('/test-confirm', async (req, res) => {
   }
 });
 
+/*
+ * Страница статуса открывается по номеру заказа без входа, а номер легко подобрать
+ * (дата + 4 цифры). Поэтому персональные данные отдаём только в замаскированном виде.
+ */
+function maskName(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '';
+  return [parts[0], ...parts.slice(1).map(p => `${p[0]}.`)].join(' ');
+}
+
+function maskPhone(phone) {
+  const d = String(phone || '').replace(/\D/g, '');
+  return d.length >= 4 ? `+7 (***) ***-${d.slice(-4, -2)}-${d.slice(-2)}` : '';
+}
+
+function maskEmail(email) {
+  const [user, domain] = String(email || '').split('@');
+  if (!user || !domain) return '';
+  return `${user[0]}***@${domain}`;
+}
+
+// Пункт выдачи — публичный адрес; адрес курьерской доставки показываем только до города
+function publicAddress(order) {
+  if (order.delivery_type === 'pvz') return order.delivery_address;
+  const city = String(order.delivery_address || '').split(',')[0].trim();
+  return city ? `${city}, адрес скрыт` : '';
+}
+
 // GET /api/payments/status/:order_number — Check status for order-status page
 router.get('/status/:order_number', (req, res) => {
   try {
@@ -92,11 +120,11 @@ router.get('/status/:order_number', (req, res) => {
       payment_status: order.payment_status || 'pending',
       payment_method: order.payment_method || 'yookassa',
       total_price: order.total_price,
-      customer_name: order.customer_name,
-      customer_phone: order.customer_phone,
-      customer_email: order.customer_email,
+      customer_name: maskName(order.customer_name),
+      customer_phone: maskPhone(order.customer_phone),
+      customer_email: maskEmail(order.customer_email),
       delivery_method: order.delivery_method,
-      delivery_address: order.delivery_address,
+      delivery_address: publicAddress(order),
       items: parsedItems,
       paid_at: order.paid_at,
       created_at: order.created_at

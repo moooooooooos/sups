@@ -1482,6 +1482,43 @@ function adminConfirm({ title = 'Подтвердите действие', text 
   });
 }
 
+/* ---------- Небольшая форма в окне (вместо системного prompt, который работает не везде) ---------- */
+function adminForm({ title, text = '', fields, confirmText = 'Сохранить' }) {
+  return new Promise(resolve => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'admin-modal-backdrop open confirm-backdrop';
+    backdrop.innerHTML = `
+      <form class="admin-modal-card confirm-card" role="dialog" aria-modal="true">
+        <h3>${escapeHtml(title)}</h3>
+        ${text ? `<p>${text}</p>` : ''}
+        ${fields.map(fl => `
+          <div class="form-group">
+            <label class="form-label">${escapeHtml(fl.label)}</label>
+            <input class="form-input" name="${escapeHtml(fl.name)}" type="${fl.type || 'text'}" value="${escapeHtml(fl.value ?? '')}"
+              ${fl.min !== undefined ? `min="${fl.min}"` : ''} ${fl.max !== undefined ? `max="${fl.max}"` : ''} required>
+          </div>
+        `).join('')}
+        <div class="confirm-actions">
+          <button type="button" class="btn btn-secondary btn-sm" data-answer="no">Отмена</button>
+          <button type="submit" class="btn btn-primary btn-sm">${escapeHtml(confirmText)}</button>
+        </div>
+      </form>
+    `;
+    const form = backdrop.querySelector('form');
+    const close = value => { backdrop.remove(); resolve(value); };
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      close(Object.fromEntries(new FormData(form).entries()));
+    });
+    backdrop.addEventListener('click', e => {
+      if (e.target.closest('[data-answer="no"]') || e.target === backdrop) close(null);
+    });
+    backdrop.addEventListener('keydown', e => { if (e.key === 'Escape') close(null); });
+    document.body.appendChild(backdrop);
+    form.querySelector('input').focus();
+  });
+}
+
 /* ---------- Заказы ---------- */
 const ORDER_STATUS_LABELS = {
   new: 'Ожидает оплаты',
@@ -1943,18 +1980,17 @@ async function loadCustomersTable() {
 }
 
 async function editCustomerBonuses(customerId, name, currentBonuses, currentDiscount) {
-  const newBonuses = prompt(`Изменить бонусы для ${name}:`, currentBonuses);
-  if (newBonuses === null) return;
-
-  const newDiscount = prompt(`Изменить персональную скидку (%) для ${name}:`, currentDiscount);
-  if (newDiscount === null) return;
-
-  const confirmed = await adminConfirm({
-    title: 'Сохранить изменения покупателя?',
-    text: `${escapeHtml(name)}: бонусы ${escapeHtml(currentBonuses)} → <b>${escapeHtml(newBonuses)}</b>, скидка ${escapeHtml(currentDiscount)}% → <b>${escapeHtml(newDiscount)}%</b>.`,
-    confirmText: 'Сохранить'
+  const values = await adminForm({
+    title: `Бонусы и скидка: ${name}`,
+    text: `Сейчас: ${escapeHtml(currentBonuses)} бонусов, скидка ${escapeHtml(currentDiscount)}%. Изменения увидит покупатель в личном кабинете.`,
+    fields: [
+      { name: 'bonuses', label: 'Бонусы', type: 'number', value: currentBonuses, min: 0 },
+      { name: 'discount', label: 'Персональная скидка, %', type: 'number', value: currentDiscount, min: 0, max: 50 }
+    ]
   });
-  if (!confirmed) return;
+  if (!values) return;
+  const newBonuses = values.bonuses;
+  const newDiscount = values.discount;
 
   try {
     const res = await fetch(`/api/admin/customers/${customerId}`, {

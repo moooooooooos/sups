@@ -6,7 +6,9 @@ const db = require('../db');
 const orderStatus = require('../services/orderStatus');
 const cdekShipments = require('../services/cdekShipments');
 
-const CUSTOMER_JWT_SECRET = process.env.CUSTOMER_JWT_SECRET || 'sups_customer_secret_key_2026';
+const { getSecret } = require('../services/secrets');
+
+const CUSTOMER_JWT_SECRET = getSecret('customer_jwt', 'CUSTOMER_JWT_SECRET');
 
 function generateUserCode() {
   const num = Math.floor(1000 + Math.random() * 9000);

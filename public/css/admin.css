@@ -1011,7 +1011,8 @@ body.admin-body {
    Confirm dialog, order card, status badges
    ============================================================ */
 .confirm-backdrop {
-  z-index: 2000;
+  /* Поверх остальных окон админки (у них z-index 10000) */
+  z-index: 10050;
 }
 
 .confirm-card {
