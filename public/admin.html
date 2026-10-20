@@ -83,7 +83,7 @@
         <li class="admin-nav-item" data-tab="dashboard">
           <a href="#">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-            <span>Сводка</span>
+            <span>Аналитика</span>
           </a>
         </li>
         <li class="admin-nav-item" data-tab="settings">
@@ -138,9 +138,14 @@
                 <span id="admin-prod-count" style="font-size:0.85rem; color:#888; font-weight:600;">0 шт.</span>
               </div>
 
-              <button id="btn-open-add-product" class="btn btn-primary btn-sm">
-                + Добавить товар
-              </button>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openTrashModal()">
+                  🗑 Корзина <span id="admin-trash-count" class="trash-count"></span>
+                </button>
+                <button id="btn-open-add-product" class="btn btn-primary btn-sm">
+                  + Добавить товар
+                </button>
+              </div>
             </div>
 
             <div class="admin-table-container">
@@ -171,12 +176,20 @@
               <div class="admin-table-controls">
                 <select id="admin-orders-status-filter" class="filter-select" onchange="loadOrdersTable()">
                   <option value="all">Все статусы</option>
-                  <option value="new">Новые</option>
-                  <option value="processing">В обработке</option>
-                  <option value="shipped">Отправлены</option>
-                  <option value="completed">Выполнены</option>
-                  <option value="cancelled">Отмененные</option>
+                  <option value="new">Ожидают оплаты</option>
+                  <option value="paid">Оплачены, в обработке</option>
+                  <option value="processing">Собираем</option>
+                  <option value="shipped">Переданы в доставку</option>
+                  <option value="ready_for_pickup">Ждут в пункте выдачи</option>
+                  <option value="delivered">Получены</option>
+                  <option value="returned">Возвраты</option>
+                  <option value="cancelled">Отменённые</option>
                 </select>
+              </div>
+              <div class="orders-export">
+                <label>с <input type="date" id="orders-export-from" class="filter-select"></label>
+                <label>по <input type="date" id="orders-export-to" class="filter-select"></label>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="exportOrders()">⬇ Скачать в Excel</button>
               </div>
             </div>
 
@@ -235,6 +248,7 @@
                   <!-- Loaded dynamically -->
                 </tbody>
               </table>
+            </div>
           </div>
         </div>
 
@@ -265,6 +279,10 @@
                   <!-- Loaded dynamically -->
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+
         <!-- TAB: Promo Codes View -->
         <div id="tab-view-promo" class="admin-tab-view" style="display:none;">
           <div class="admin-card">
@@ -301,45 +319,63 @@
 
         <!-- TAB 3: Dashboard / Stats View -->
         <div id="tab-view-dashboard" class="admin-tab-view" style="display:none;">
-          <div class="admin-stats-grid">
-            <div class="stat-card">
-              <div class="stat-icon-wrap stat-icon-products">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-label">Всего товаров</span>
-                <span id="stat-total-products" class="stat-value">0</span>
-              </div>
+          <div class="an-toolbar">
+            <div class="an-periods" id="an-periods">
+              <button type="button" data-days="1">Сегодня</button>
+              <button type="button" data-days="7">7 дней</button>
+              <button type="button" data-days="30" class="active">30 дней</button>
+              <button type="button" data-days="90">90 дней</button>
+              <button type="button" data-days="0">Всё время</button>
             </div>
+            <label class="an-scope">
+              Продажи:
+              <select id="an-scope" class="filter-select">
+                <option value="paid">только оплаченные</option>
+                <option value="all">все оформленные</option>
+              </select>
+            </label>
+          </div>
 
-            <div class="stat-card">
-              <div class="stat-icon-wrap stat-icon-stock">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-label">В наличии</span>
-                <span id="stat-stock-products" class="stat-value">0</span>
-              </div>
+          <h3 class="an-section-title">Продажи</h3>
+          <div class="an-kpis" id="an-kpis-sales"></div>
+
+          <h3 class="an-section-title">Посещаемость</h3>
+          <div class="an-kpis" id="an-kpis-traffic"></div>
+
+          <div class="admin-card an-card">
+            <div class="an-card-head">
+              <h4>По дням</h4>
+              <div class="an-legend"><span class="an-dot an-dot-rev"></span>Выручка <span class="an-dot an-dot-ses"></span>Визиты</div>
             </div>
+            <div id="an-daily-chart" class="an-chart"></div>
+          </div>
 
-            <div class="stat-card">
-              <div class="stat-icon-wrap stat-icon-orders">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path></svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-label">Новых заказов</span>
-                <span id="stat-total-orders" class="stat-value">0</span>
-              </div>
+          <div class="an-grid">
+            <div class="admin-card an-card">
+              <h4>Топ покупок</h4>
+              <div class="an-hint">Нажмите на товар, чтобы увидеть разбивку по размерам и цветам</div>
+              <div id="an-top-purchases"></div>
             </div>
-
-            <div class="stat-card">
-              <div class="stat-icon-wrap stat-icon-revenue">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-label">Общая выручка</span>
-                <span id="stat-total-rev" class="stat-value">0 ₽</span>
-              </div>
+            <div class="admin-card an-card">
+              <h4>Топ просмотров товаров</h4>
+              <div id="an-top-viewed"></div>
+            </div>
+            <div class="admin-card an-card">
+              <h4>Топ городов</h4>
+              <div class="an-hint">По адресу доставки в заказах</div>
+              <div id="an-top-cities"></div>
+            </div>
+            <div class="admin-card an-card">
+              <h4>Устройства</h4>
+              <div id="an-devices"></div>
+            </div>
+            <div class="admin-card an-card">
+              <h4>Источники трафика</h4>
+              <div id="an-sources"></div>
+            </div>
+            <div class="admin-card an-card">
+              <h4>Популярные страницы</h4>
+              <div id="an-top-pages"></div>
             </div>
           </div>
         </div>
@@ -356,12 +392,104 @@
 
               <div class="form-group">
                 <label class="form-label">Telegram Chat ID</label>
-                <input type="text" id="setting-tg-chat" class="form-input" placeholder="-1004383260528">
+                <input type="text" id="setting-tg-chat" class="form-input" placeholder="-100XXXXXXXXXX">
               </div>
 
-              <div class="form-group">
-                <label class="form-label">Стоимость доставки СДЭК (ПВЗ), ₽</label>
-                <input type="number" id="setting-deliv-pvz" class="form-input" value="350">
+              <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #eee;">
+                <h4 style="margin-bottom: 6px;">✉️ Письма покупателям</h4>
+                <p class="settings-hint">Покупатель получает письма, когда заказ оплачен, передан в доставку (с трек-номером), ждёт в пункте выдачи, получен или отменён. Удобнее всего завести ящик на своём домене в панели Beget («Почта»), например shop@sups-official.ru.</p>
+                <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+                  <input type="checkbox" id="setting-emails-enabled" style="width:18px; height:18px; cursor:pointer;">
+                  <label for="setting-emails-enabled" style="cursor:pointer; font-weight:600; font-size:0.9rem;">Отправлять письма покупателям</label>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Почта отправителя (логин SMTP)</label>
+                  <input type="email" id="setting-smtp-user" class="form-input" placeholder="shop@sups-official.ru" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Пароль от этой почты</label>
+                  <input type="password" id="setting-smtp-password" class="form-input" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Имя отправителя / SMTP-сервер / порт</label>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <input type="text" id="setting-mail-from-name" class="form-input" placeholder="САПС" style="flex:1; min-width:120px;">
+                    <input type="text" id="setting-smtp-host" class="form-input" placeholder="smtp.beget.com" style="flex:1; min-width:140px;">
+                    <input type="number" id="setting-smtp-port" class="form-input" placeholder="465" style="width:90px;">
+                  </div>
+                </div>
+                <div class="form-group" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                  <input type="email" id="setting-test-email-to" class="form-input" placeholder="Куда отправить тестовое письмо" style="flex:1; min-width:200px;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="sendTestEmail()">Отправить тест</button>
+                </div>
+                <div id="setting-test-email-result" class="settings-hint"></div>
+              </div>
+
+              <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #eee;">
+                <h4 style="margin-bottom: 6px;">🚚 Доставка</h4>
+                <p class="settings-hint">Цены и пункты выдачи берутся из API перевозчиков. Покупатель выбирает город и пункт выдачи из списка, адрес для курьера проверяется. Пока ни один перевозчик не подключён, адрес вводится вручную, а цена берётся из поля ниже.</p>
+
+                <div class="form-group">
+                  <label class="form-label">Бесплатная доставка от суммы заказа, ₽ (0 — выключено)</label>
+                  <input type="number" id="setting-free-delivery" class="form-input" placeholder="7000">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Вес посылки с одним изделием, г / каждое следующее изделие, г</label>
+                  <div style="display:flex; gap:8px;">
+                    <input type="number" id="setting-parcel-weight" class="form-input" placeholder="300">
+                    <input type="number" id="setting-item-weight" class="form-input" placeholder="50">
+                  </div>
+                </div>
+
+                <h5 class="settings-subtitle">СДЭК</h5>
+                <div class="form-group">
+                  <label class="form-label">Account (Client ID)</label>
+                  <input type="text" id="setting-cdek-id" class="form-input" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Secure password (Client Secret)</label>
+                  <input type="password" id="setting-cdek-secret" class="form-input" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Код города отправки СДЭК (250 — Екатеринбург)</label>
+                  <input type="number" id="setting-cdek-city" class="form-input" placeholder="250">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Код офиса СДЭК, куда вы сдаёте посылки (например, EKB5)</label>
+                  <input type="text" id="setting-cdek-shipment-point" class="form-input" placeholder="EKB5" autocomplete="off">
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+                  <input type="checkbox" id="setting-cdek-test" style="width:18px; height:18px; cursor:pointer;" checked>
+                  <label for="setting-cdek-test" style="cursor:pointer; font-weight:600; font-size:0.9rem;">Тестовая среда СДЭК (api.edu.cdek.ru)</label>
+                </div>
+                <p class="settings-hint">Боевые ключи: личный кабинет СДЭК → «Интеграция» → «Создать ключ». Тестовые данные опубликованы на apidoc.cdek.ru. Справочник городов СДЭК используется и для Яндекс Доставки, поэтому СДЭК нужно подключить в любом случае.</p>
+
+                <h5 class="settings-subtitle">Яндекс Доставка</h5>
+                <div class="form-group">
+                  <label class="form-label">API-токен (кабинет Яндекс Доставки → «Профиль»)</label>
+                  <input type="password" id="setting-ya-token" class="form-input" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">ID склада отгрузки (platform_station_id, выдаёт менеджер)</label>
+                  <input type="text" id="setting-ya-station" class="form-input" autocomplete="off">
+                </div>
+                <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+                  <input type="checkbox" id="setting-ya-test" style="width:18px; height:18px; cursor:pointer;" checked>
+                  <label for="setting-ya-test" style="cursor:pointer; font-weight:600; font-size:0.9rem;">Тестовый контур Яндекса</label>
+                </div>
+
+                <h5 class="settings-subtitle">Подсказки адреса до дома (DaData, необязательно)</h5>
+                <div class="form-group">
+                  <label class="form-label">API-ключ DaData</label>
+                  <input type="password" id="setting-dadata-key" class="form-input" autocomplete="new-password">
+                </div>
+                <p class="settings-hint">С ключом DaData покупатель выбирает улицу и дом из подсказок, поэтому несуществующий адрес для курьера указать нельзя. Без ключа проверяется только формат улицы и номера дома. Ключ бесплатный: dadata.ru → «API-ключи».</p>
+
+                <div class="form-group">
+                  <label class="form-label">Цена доставки, пока перевозчики не подключены, ₽</label>
+                  <input type="number" id="setting-deliv-pvz" class="form-input" value="350">
+                </div>
               </div>
 
               <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #eee;">
@@ -471,6 +599,35 @@
             </div>
 
             <div id="admin-image-previews" class="image-previews-list"></div>
+            <div style="font-size:0.75rem; color:#888; margin-top:-8px;">Перетащите фото мышкой или используйте стрелки, чтобы поменять порядок. Первое фото — главное в каталоге.</div>
+          </div>
+
+          <!-- Colour Variants Manager -->
+          <div class="form-group">
+            <label class="form-label">Цвета изделия</label>
+            <div style="font-size:0.8rem; color:#666; margin-bottom:10px;">
+              Покупатель, выбравший цвет, видит только фото этого цвета. Привяжите каждое фото к цвету: под фото выберите цвет или загрузите фото прямо в блок цвета.
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <input type="text" id="admin-input-new-color-name" class="form-input" placeholder="Например: Чёрный" style="max-width:200px;">
+              <input type="color" id="admin-input-new-color-hex" value="#1e1e1e" class="color-hex-input" title="Оттенок кружка на сайте">
+              <button type="button" id="btn-add-color" class="btn btn-secondary btn-sm">+ Добавить цвет</button>
+            </div>
+            <div class="color-presets" id="admin-color-presets"></div>
+            <div id="admin-colors-container" class="colors-manager"></div>
+            <div id="admin-colors-warning" class="colors-warning"></div>
+            <input type="file" id="admin-color-photo-input" multiple accept="image/*" style="display:none;">
+          </div>
+
+          <!-- «Может понравиться» -->
+          <div class="form-group">
+            <label class="form-label">Может понравиться</label>
+            <div class="settings-hint">Эти украшения покупатель увидит в карточке товара. Если выбрать меньше 6, остальные подберутся автоматически из той же коллекции и категории.</div>
+            <div class="related-search">
+              <input type="text" id="admin-related-search" class="form-input" placeholder="Найти украшение по названию или SKU…" autocomplete="off">
+              <ul id="admin-related-results" class="related-results" hidden></ul>
+            </div>
+            <div id="admin-related-list" class="related-list"></div>
           </div>
 
           <!-- Sizes Manager -->
@@ -511,6 +668,20 @@
   </div>
 
   <!-- Modal: Order Details -->
+  <!-- Modal: Trash (deleted products) -->
+  <div id="admin-trash-modal" class="admin-modal-backdrop">
+    <div class="admin-modal-card" style="max-width: 720px;">
+      <div class="admin-modal-header">
+        <h3>Корзина удалённых товаров</h3>
+        <button onclick="closeTrashModal()" style="background:none; border:none; font-size:1.6rem; cursor:pointer;">×</button>
+      </div>
+      <div class="admin-modal-body">
+        <p class="settings-hint">Удалённые товары хранятся здесь 30 дней, потом удаляются автоматически.</p>
+        <div id="admin-trash-list"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="admin-order-modal" class="admin-modal-backdrop">
     <div class="admin-modal-card">
       <div class="admin-modal-header">

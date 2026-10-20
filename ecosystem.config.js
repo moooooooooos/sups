@@ -1,3 +1,11 @@
+// Настройки домена пишет deploy.sh в data/.deploy.json (файл не хранится в git)
+let deploy = {};
+try {
+  deploy = require('./data/.deploy.json');
+} catch (e) {
+  deploy = {};
+}
+
 module.exports = {
   apps: [
     {
@@ -9,7 +17,9 @@ module.exports = {
       max_memory_restart: '500M',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000
+        PORT: 3000,
+        // Адрес сайта для ссылок в sitemap, canonical и письмах (https://домен)
+        SITE_URL: deploy.siteUrl || ''
       }
     }
   ]

@@ -7,8 +7,8 @@ const SUPS_CART_KEY = 'sups_cart_v1';
 class SupsCart {
   constructor() {
     this.items = this.loadCart();
-    this.deliveryMethod = 'cdek_pvz';
-    this.deliveryPrice = 350;
+    this.deliveryMethod = null; // выбирается в форме заказа (js/delivery.js)
+    this.deliveryPrice = 0;
     this.freeDeliveryThreshold = 7000;
     this.appliedPromo = null;
     this.initUI();
@@ -35,11 +35,13 @@ class SupsCart {
   addItem(item) {
     const qty = parseInt(item.quantity) || 1;
     const size = item.size || '';
+    const color = item.color || '';
     const isCustom = !!item.is_custom;
 
-    const existingIdx = this.items.findIndex(i => 
-      i.id === item.id && 
-      (i.size || '') === size && 
+    const existingIdx = this.items.findIndex(i =>
+      i.id === item.id &&
+      (i.size || '') === size &&
+      (i.color || '') === color &&
       !i.is_custom && 
       !isCustom
     );
@@ -53,8 +55,11 @@ class SupsCart {
         price: parseFloat(item.price) || 0,
         image: item.image || (item.images && item.images[0]) || '',
         size: size,
+        color: color,
         is_custom: isCustom,
         custom_details: item.custom_details || null,
+        // Для кастомных колец сервер считает цену по модели и опции логотипа
+        ...(isCustom && item.model_id ? { model_id: item.model_id, remove_logo: item.remove_logo === true } : {}),
         quantity: qty
       });
     }
@@ -258,7 +263,10 @@ class SupsCart {
       }
     }
 
-    if (delivEl) delivEl.textContent = isFree ? 'Бесплатно' : `${delivPrice} ₽`;
+    if (delivEl) {
+      if (isFree) delivEl.textContent = 'Бесплатно';
+      else delivEl.textContent = this.deliveryMethod ? `${delivPrice.toLocaleString('ru-RU')} ₽` : 'выберите способ';
+    }
     if (totalEl) totalEl.textContent = `${total.toLocaleString('ru-RU')} ₽`;
   }
 
@@ -293,6 +301,7 @@ class SupsCart {
           <div>
             <div class="cart-item-title">${item.title}</div>
             ${item.size ? `<div class="cart-item-options">Размер: <b>${item.size}</b></div>` : ''}
+            ${item.color ? `<div class="cart-item-options">Цвет: <b>${item.color}</b></div>` : ''}
             ${item.is_custom ? `<div class="cart-item-custom-badge">Кастомная гравировка</div>` : ''}
           </div>
           <div class="cart-item-bottom">
@@ -325,25 +334,19 @@ class SupsCart {
       return;
     }
 
-    const subtotal = this.getSubtotal();
-    let promoDiscount = 0;
-    if (this.appliedPromo) {
-      promoDiscount = Math.round((subtotal * this.appliedPromo.discount_percent) / 100);
-    }
-    const payableSubtotal = Math.max(0, subtotal - promoDiscount);
-    const isFree = payableSubtotal >= this.freeDeliveryThreshold;
-    const deliveryPrice = isFree ? 0 : this.deliveryPrice;
-
+    // Способ и цену доставки сервер проверяет и считает сам по выбору из формы
     const payload = {
       customer_name: formData.name,
       customer_phone: formData.phone,
       customer_email: formData.email,
-      delivery_method: this.deliveryMethod === 'cdek_courier' ? 'СДЭК Курьер' : (this.deliveryMethod === 'post' ? 'Почта России' : 'СДЭК ПВЗ'),
+      delivery: formData.delivery || null,
       delivery_address: formData.address,
       comment: formData.comment,
       items: this.items,
-      delivery_price: deliveryPrice,
-      promo_code: this.appliedPromo ? this.appliedPromo.code : null
+      promo_code: this.appliedPromo ? this.appliedPromo.code : null,
+      offer_accepted: formData.offer_accepted === true,
+      pd_consent: formData.pd_consent === true,
+      device: window.supsAnalytics ? window.supsAnalytics.device : null
     };
 
     const headers = { 'Content-Type': 'application/json' };
@@ -359,19 +362,27 @@ class SupsCart {
         submitBtn.textContent = 'Оформляем...';
       }
 
-      let data;
-    try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
+      const res = await fetch('/api/orders', {
+        method: 'POST',
         headers,
         body: JSON.stringify(payload)
       });
-      if (res.ok) data = await res.json();
-    } catch(e) {}
-
-    if (!data || !data.order_number) {
-      data = { order_number: "SUPS-" + Math.floor(100000 + Math.random() * 900000) };
-    }
+      const data = await res.json().catch(() => ({}));
+      // Без подтверждения сервера заказ не считается оформленным
+      if (!res.ok || !data.order_number) {
+        // Ошибку в телефоне, email или доставке показываем рядом с полем
+        const dw = window.supsDelivery;
+        if (dw && data.field === 'delivery') { dw.showError(data.error); return; }
+        if (dw && (data.field === 'phone' || data.field === 'email')) { dw.fieldError(data.field, data.error); return; }
+        // Цены сменились на сервере: обновляем корзину, чтобы покупатель увидел новую сумму
+        if (res.status === 409 && Array.isArray(data.prices)) {
+          data.prices.forEach(({ index, price }) => { if (this.items[index]) this.items[index].price = price; });
+          this.saveCart();
+          this.updateCheckoutSummary();
+        }
+        if (data.field === 'promo') { this.appliedPromo = null; this.updateCheckoutSummary(); }
+        throw new Error(data.error || 'сервер не принял заказ, попробуйте ещё раз');
+      }
 
       // Success
       this.clear();
@@ -388,7 +399,13 @@ class SupsCart {
       if (successModal) successModal.classList.add('open');
 
     } catch (err) {
-      alert(`Не удалось оформить заказ: ${err.message}`);
+      // Ошибку показываем в форме: системный alert не виден во встроенных браузерах соцсетей
+      if (window.supsDelivery && window.supsDelivery.showError) {
+        window.supsDelivery.showError(`Не удалось оформить заказ: ${err.message}`);
+        document.getElementById('delivery-widget')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      } else {
+        alert(`Не удалось оформить заказ: ${err.message}`);
+      }
     } finally {
       const submitBtn = document.getElementById('btn-submit-order');
       if (submitBtn) {

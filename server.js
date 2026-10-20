@@ -25,6 +25,10 @@ const { router: customersRouter } = require('./src/routes/customers');
 const promoRouter = require('./src/routes/promo');
 const adminRouter = require('./src/routes/admin');
 const paymentsRouter = require('./src/routes/payments');
+const analyticsRouter = require('./src/routes/analytics');
+const deliveryRouter = require('./src/routes/delivery');
+const customRouter = require('./src/routes/custom');
+const { router: seoRouter } = require('./src/routes/seo');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,7 +40,23 @@ app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
 // Static files
 const publicDir = path.join(__dirname, 'public');
-app.use(express.static(publicDir));
+// За nginx: протокол и IP клиента берём из заголовков прокси (https в ссылках, IP для ограничений)
+app.set('trust proxy', 'loopback');
+
+// Статика: у HTML/CSS/JS нет версий в именах, поэтому браузер каждый раз сверяет ETag
+// (без изменений — короткий ответ 304); картинки и шрифты кэшируются на неделю
+app.use(express.static(publicDir, {
+  setHeaders(res, filePath) {
+    if (/\.(jpe?g|png|webp|gif|svg|ico|woff2?|ttf)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=604800');
+    } else {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
+
+// SEO: страницы товаров по адресам Тильды, sitemap.xml, robots.txt, перенаправления
+app.use(seoRouter);
 
 // Uploads
 const uploadsDir = path.join(__dirname, 'public/uploads');
@@ -55,6 +75,9 @@ app.use('/api/auth', authRouter);
 app.use('/api/customers', customersRouter);
 app.use('/api/promo', promoRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/analytics', analyticsRouter);
+app.use('/api/delivery', deliveryRouter);
+app.use('/api/custom', customRouter);
 
 // Clean URL routing for HTML pages
 const cleanPages = [
@@ -63,7 +86,6 @@ const cleanPages = [
   'earrings',
   'pendants',
   'bracelets',
-  'collaborations',
   'mystery',
   'custom-sups',
   'sizer',
@@ -72,6 +94,7 @@ const cleanPages = [
   'privacy',
   'agreement',
   'offer',
+  'consent',
   'leave-review',
   'account',
   'admin',

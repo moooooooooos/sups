@@ -127,8 +127,9 @@ async function createPayment({ order, returnUrl }) {
       };
 
     } catch (err) {
-      console.warn('YooKassa live call failed, falling back to test simulator:', err.message);
-      // Fallback to test payment screen if credentials failed
+      // С боевыми ключами симулятор не подставляем: иначе заказ «оплачивался» бы без денег
+      console.error('YooKassa live call failed:', err.message);
+      throw err;
     }
   }
 
@@ -153,25 +154,44 @@ async function createPayment({ order, returnUrl }) {
 /**
  * Handle incoming Webhook from YooKassa
  */
+// Платёж из API ЮKassa (а не из тела уведомления, которое может прислать кто угодно)
+async function fetchPayment(paymentId, config) {
+  const authStr = Buffer.from(`${config.shopId}:${config.secretKey}`).toString('base64');
+  const res = await fetch(`https://api.yookassa.ru/v3/payments/${encodeURIComponent(paymentId)}`, {
+    headers: { 'Authorization': `Basic ${authStr}` },
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!res.ok) throw new Error(`ЮKassa не подтвердила платёж (${res.status})`);
+  return res.json();
+}
+
 async function handleWebhook(body) {
-  if (!body || !body.event || !body.object) {
+  if (!body || !body.event || !body.object || !body.object.id) {
     return { success: false, error: 'Invalid webhook payload' };
   }
 
-  const { event, object } = body;
-  const paymentId = object.id;
-  const orderNumber = object.metadata && object.metadata.order_number;
-
-  let order = null;
-  if (orderNumber) {
-    order = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(orderNumber);
-  } else if (paymentId) {
-    order = db.prepare('SELECT * FROM orders WHERE payment_id = ?').get(paymentId);
+  const config = getYooKassaConfig();
+  if (!(config.shopId && config.secretKey)) {
+    return { success: false, error: 'YooKassa is not configured' };
   }
 
+  const paymentId = String(body.object.id);
+  const payment = await fetchPayment(paymentId, config);
+  const object = payment;
+  const event = payment.status === 'succeeded' ? 'payment.succeeded'
+    : payment.status === 'canceled' ? 'payment.canceled' : 'payment.' + payment.status;
+
+  // Заказ ищем только по id платежа, который мы сами сохранили при создании
+  const order = db.prepare('SELECT * FROM orders WHERE payment_id = ?').get(paymentId);
   if (!order) {
     console.warn(`[YooKassa Webhook] Order not found for payment ${paymentId}`);
     return { success: false, error: 'Order not found' };
+  }
+
+  const paidValue = parseFloat(payment.amount && payment.amount.value);
+  if (event === 'payment.succeeded' && Math.abs(paidValue - Number(order.total_price)) > 0.009) {
+    console.error(`[YooKassa Webhook] Amount mismatch for ${order.order_number}: paid ${paidValue}, expected ${order.total_price}`);
+    return { success: false, error: 'Amount mismatch' };
   }
 
   if (event === 'payment.succeeded') {
@@ -187,9 +207,7 @@ async function handleWebhook(body) {
         `━━━━━━━━━━━━━━━━━━━\n` +
         `📦 *Заказ:* \`${order.order_number}\`\n` +
         `💰 *Сумма:* ${order.total_price.toLocaleString('ru-RU')} ₽\n` +
-        `👤 *Клиент:* ${order.customer_name}\n` +
-        `📞 *Телефон:* ${order.customer_phone}\n` +
-        `🚚 *Доставка:* ${order.delivery_method} — ${order.delivery_address || 'Самовывоз'}\n` +
+        `🚚 *Доставка:* ${order.delivery_method}\n` +
         `🆔 *ID платежа:* \`${paymentId}\`\n` +
         `━━━━━━━━━━━━━━━━━━━\n` +
         `✅ Заказ переведен в статус *Оплачен*`;
@@ -218,9 +236,16 @@ async function handleWebhook(body) {
  * Confirm test payment for simulator
  */
 async function confirmTestPayment(orderNumber) {
+  const config = getYooKassaConfig();
+  if (config.shopId && config.secretKey) {
+    throw new Error('Тестовая оплата отключена: подключена ЮKassa');
+  }
   const order = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(orderNumber);
   if (!order) {
     throw new Error('Заказ не найден');
+  }
+  if (order.payment_method !== 'yookassa_test' || order.payment_status === 'paid') {
+    throw new Error('Для этого заказа тестовая оплата недоступна');
   }
 
   db.prepare(`
@@ -235,9 +260,7 @@ async function confirmTestPayment(orderNumber) {
       `━━━━━━━━━━━━━━━━━━━\n` +
       `📦 *Заказ:* \`${order.order_number}\`\n` +
       `💰 *Сумма:* ${order.total_price.toLocaleString('ru-RU')} ₽\n` +
-      `👤 *Клиент:* ${order.customer_name}\n` +
-      `📞 *Телефон:* ${order.customer_phone}\n` +
-      `🚚 *Доставка:* ${order.delivery_method} — ${order.delivery_address || 'Самовывоз'}\n` +
+      `🚚 *Доставка:* ${order.delivery_method}\n` +
       `━━━━━━━━━━━━━━━━━━━\n` +
       `✅ Заказ переведен в статус *Оплачен*`;
 

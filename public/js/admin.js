@@ -7,7 +7,19 @@ let currentTab = 'products';
 let currentProducts = [];
 let editingProductId = null;
 let uploadedImages = [];
+// Цвет каждого фото, параллельно uploadedImages: id варианта или '' (без цвета)
+let uploadedImageColors = [];
+// Цветовые варианты товара: { id, name, hex }. Фото хранятся в uploadedImageColors,
+// при сохранении превращаются в индексы color_variants[].images
+let currentColors = [];
 let currentSizes = [];
+
+const COLOR_PRESETS = [
+  { name: 'Сталь', hex: '#c0c4c8' },
+  { name: 'Чёрный', hex: '#1e1e1e' },
+  { name: 'Золото', hex: '#d4af37' },
+  { name: 'Розовое золото', hex: '#e8b4b8' }
+];
 let reviewUploadedPhotos = [];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -88,6 +100,7 @@ function showAdminDashboard(user) {
   bindNavigation();
   switchTab('products');
   loadStats();
+  updateTrashCount();
 }
 
 function bindNavigation() {
@@ -157,6 +170,43 @@ function bindNavigation() {
     });
   }
 
+  // Colours Manager
+  const addColorBtn = document.getElementById('btn-add-color');
+  const colorNameInput = document.getElementById('admin-input-new-color-name');
+  const colorHexInput = document.getElementById('admin-input-new-color-hex');
+  if (addColorBtn && colorNameInput && colorHexInput) {
+    addColorBtn.addEventListener('click', () => {
+      if (addColorVariant(colorNameInput.value, colorHexInput.value)) {
+        colorNameInput.value = '';
+      }
+    });
+    colorNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addColorBtn.click();
+      }
+    });
+  }
+
+  const presetsEl = document.getElementById('admin-color-presets');
+  if (presetsEl) {
+    presetsEl.innerHTML = COLOR_PRESETS.map((p, i) => `
+      <button type="button" class="color-preset-btn" onclick="addColorPreset(${i})">
+        <span class="color-dot" style="background:${p.hex}"></span>${p.name}
+      </button>
+    `).join('');
+  }
+
+  const colorPhotoInput = document.getElementById('admin-color-photo-input');
+  if (colorPhotoInput) {
+    colorPhotoInput.addEventListener('change', async () => {
+      if (colorPhotoInput.files.length) {
+        await uploadFiles(colorPhotoInput.files, colorPhotoInput.dataset.colorId || '');
+      }
+      colorPhotoInput.value = '';
+    });
+  }
+
   // Product Form Submit
   const prodForm = document.getElementById('admin-product-form');
   if (prodForm) {
@@ -185,7 +235,7 @@ function switchTab(tab) {
   const titleEl = document.getElementById('admin-topbar-title');
   if (titleEl) {
     const titles = {
-      dashboard: 'Сводка и аналитика',
+      dashboard: 'Аналитика магазина',
       products: 'Управление ассортиментом',
       orders: 'Заказы интернет-магазина',
       reviews: 'Модерация отзывов покупателей',
@@ -202,7 +252,7 @@ function switchTab(tab) {
   if (tab === 'customers') loadCustomersTable();
   if (tab === 'promo') loadPromoTable();
   if (tab === 'settings') loadSettings();
-  if (tab === 'dashboard') loadStats();
+  if (tab === 'dashboard') loadAnalytics();
 }
 
 /* ============================================================
@@ -227,6 +277,207 @@ async function loadStats() {
   } catch (err) {
     console.error('Error loading stats:', err);
   }
+}
+
+/* ============================================================
+   Analytics (вкладка «Аналитика»)
+   ============================================================ */
+let analyticsDays = 30;
+let analyticsBound = false;
+
+const AN_DEVICE_NAMES = { mobile: 'Телефон', tablet: 'Планшет', desktop: 'Компьютер', unknown: 'Нет данных' };
+
+function fmtRub(value) {
+  return `${Math.round(value || 0).toLocaleString('ru-RU')} ₽`;
+}
+
+function fmtNum(value) {
+  return Math.round(value || 0).toLocaleString('ru-RU');
+}
+
+function fmtDuration(sec) {
+  sec = Math.round(sec || 0);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m ? `${m} мин ${String(s).padStart(2, '0')} с` : `${s} с`;
+}
+
+function bindAnalyticsControls() {
+  if (analyticsBound) return;
+  analyticsBound = true;
+  document.querySelectorAll('#an-periods button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      analyticsDays = parseInt(btn.dataset.days, 10) || 0;
+      document.querySelectorAll('#an-periods button').forEach(b => b.classList.toggle('active', b === btn));
+      loadAnalytics();
+    });
+  });
+  const scopeEl = document.getElementById('an-scope');
+  if (scopeEl) scopeEl.addEventListener('change', loadAnalytics);
+}
+
+async function loadAnalytics() {
+  bindAnalyticsControls();
+  const scope = (document.getElementById('an-scope') || {}).value || 'paid';
+  try {
+    const res = await fetch(`/api/analytics/report?days=${analyticsDays}&scope=${scope}`, {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
+    renderAnalytics(data);
+  } catch (err) {
+    const el = document.getElementById('an-kpis-sales');
+    if (el) el.innerHTML = `<div class="an-empty" style="color:var(--admin-red);">Не удалось загрузить аналитику: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function anKpi(label, value, sub = '') {
+  return `
+    <div class="an-kpi">
+      <div class="an-kpi-label">${label}</div>
+      <div class="an-kpi-value">${value}</div>
+      ${sub ? `<div class="an-kpi-sub">${sub}</div>` : ''}
+    </div>
+  `;
+}
+
+// Список «название — значение» с полоской доли от максимума
+function anBarList(rows, opts = {}) {
+  if (!rows || !rows.length) return '<div class="an-empty">Пока нет данных за этот период</div>';
+  const valueOf = opts.value || (r => r.count);
+  const max = Math.max(...rows.map(valueOf), 1);
+  return `<div class="an-list">${rows.map(r => `
+    <div class="an-row">
+      <div class="an-row-top">
+        <span class="an-row-name">${escapeHtml(opts.name ? opts.name(r) : r.name)}</span>
+        <span class="an-row-val">${opts.label ? opts.label(r) : fmtNum(valueOf(r))}</span>
+      </div>
+      <div class="an-bar"><span style="width:${Math.max(2, (valueOf(r) / max) * 100)}%"></span></div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderAnalytics(data) {
+  const s = data.sales;
+  const t = data.traffic;
+  const scopeLabel = data.period.scope === 'all' ? 'оформленных' : 'оплаченных';
+
+  document.getElementById('an-kpis-sales').innerHTML = [
+    anKpi('Выручка', fmtRub(s.revenue), `${scopeLabel} заказов: ${fmtNum(s.orders_counted)}`),
+    anKpi('Заказы', fmtNum(s.orders_created), `оплачено ${fmtNum(s.orders_paid)} · отменено ${fmtNum(s.orders_cancelled)}`),
+    anKpi('Средний чек', fmtRub(s.avg_check)),
+    anKpi('Продано изделий', `${fmtNum(s.items_sold)} шт.`),
+    anKpi('Повторные заказы', fmtNum(s.repeat_orders), `покупателей вернулось: ${fmtNum(s.repeat_customers)}`),
+    anKpi('Конверсия', `${s.conversion}%`, 'заказов на 100 визитов')
+  ].join('');
+
+  document.getElementById('an-kpis-traffic').innerHTML = [
+    anKpi('Посетители', fmtNum(t.visitors), 'уникальные браузеры'),
+    anKpi('Визиты', fmtNum(t.sessions)),
+    anKpi('Просмотры страниц', fmtNum(t.pageviews)),
+    anKpi('Среднее время на сайте', fmtDuration(t.avg_duration_sec)),
+    anKpi('Страниц за визит', String(t.avg_pages).replace('.', ',')),
+    anKpi('Отказы', `${String(t.bounce_rate).replace('.', ',')}%`, '1 страница и меньше 15 с')
+  ].join('');
+
+  renderDailyChart(data.daily);
+
+  // Топ покупок с разбивкой по вариантам
+  const purchasesEl = document.getElementById('an-top-purchases');
+  purchasesEl.innerHTML = data.top_purchases.length
+    ? `<div class="an-list">${data.top_purchases.map((p, i) => {
+        const max = data.top_purchases[0].count || 1;
+        return `
+          <details class="an-purchase">
+            <summary class="an-row">
+              <div class="an-row-top">
+                <span class="an-row-name">${i + 1}. ${escapeHtml(p.name)}</span>
+                <span class="an-row-val">${fmtNum(p.count)} шт. · ${fmtRub(p.revenue)}</span>
+              </div>
+              <div class="an-bar"><span style="width:${Math.max(2, (p.count / max) * 100)}%"></span></div>
+            </summary>
+            <table class="an-variants">
+              <tr><th>Вариант</th><th>Шт.</th><th>Сумма</th></tr>
+              ${p.variants.map(v => `<tr><td>${escapeHtml(v.name)}</td><td>${fmtNum(v.count)}</td><td>${fmtRub(v.revenue)}</td></tr>`).join('')}
+              <tr class="an-variants-total"><td>Заказов с товаром</td><td colspan="2">${fmtNum(p.orders)}</td></tr>
+            </table>
+          </details>
+        `;
+      }).join('')}</div>`
+    : '<div class="an-empty">Пока нет продаж за этот период</div>';
+
+  document.getElementById('an-top-viewed').innerHTML = anBarList(data.top_viewed, {
+    label: r => `${fmtNum(r.count)} просм. · ${fmtNum(r.sessions)} виз.`
+  });
+
+  document.getElementById('an-top-cities').innerHTML = anBarList(data.top_cities, {
+    label: r => `${fmtNum(r.count)} зак. · ${fmtRub(r.revenue)}`
+  });
+
+  document.getElementById('an-devices').innerHTML = `
+    <div class="an-subtitle">Визиты</div>
+    ${anBarList(data.devices.sessions, { name: r => AN_DEVICE_NAMES[r.name] || r.name })}
+    <div class="an-subtitle">Заказы</div>
+    ${anBarList(data.devices.orders, {
+      name: r => AN_DEVICE_NAMES[r.name] || r.name,
+      label: r => `${fmtNum(r.count)} зак. · ${fmtRub(r.revenue)}`
+    })}
+  `;
+
+  document.getElementById('an-sources').innerHTML = anBarList(data.sources, {
+    name: r => (r.name === 'direct' ? 'Прямые заходы' : r.name),
+    label: r => `${fmtNum(r.count)} виз.`
+  });
+
+  document.getElementById('an-top-pages').innerHTML = anBarList(data.top_pages, {
+    label: r => `${fmtNum(r.count)} просм.`
+  });
+}
+
+// Столбики выручки по дням и линия визитов (SVG без библиотек)
+function renderDailyChart(daily) {
+  const el = document.getElementById('an-daily-chart');
+  if (!el) return;
+  if (!daily || !daily.length) {
+    el.innerHTML = '<div class="an-empty">Пока нет данных за этот период</div>';
+    return;
+  }
+  const W = 760, H = 220, padL = 8, padR = 8, padT = 12, padB = 26;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const step = innerW / daily.length;
+  const maxRev = Math.max(...daily.map(d => d.revenue), 1);
+  const maxSes = Math.max(...daily.map(d => d.sessions), 1);
+  const barW = Math.max(2, Math.min(28, step * 0.6));
+  const labelEvery = Math.ceil(daily.length / 10);
+
+  const bars = daily.map((d, i) => {
+    const h = (d.revenue / maxRev) * innerH;
+    const x = padL + i * step + (step - barW) / 2;
+    return `<rect class="an-chart-bar" x="${x.toFixed(1)}" y="${(padT + innerH - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2">
+      <title>${d.day}: ${fmtRub(d.revenue)}, заказов ${d.orders}, визитов ${d.sessions}</title></rect>`;
+  }).join('');
+
+  const points = daily.map((d, i) => {
+    const x = padL + i * step + step / 2;
+    const y = padT + innerH - (d.sessions / maxSes) * innerH;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  const labels = daily.map((d, i) => (i % labelEvery === 0
+    ? `<text class="an-chart-label" x="${(padL + i * step + step / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle">${d.day.slice(8, 10)}.${d.day.slice(5, 7)}</text>`
+    : '')).join('');
+
+  el.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="an-chart-svg" role="img" aria-label="Выручка и визиты по дням">
+      <line class="an-chart-axis" x1="${padL}" x2="${W - padR}" y1="${padT + innerH}" y2="${padT + innerH}"></line>
+      ${bars}
+      <polyline class="an-chart-line" points="${points}"></polyline>
+      ${labels}
+    </svg>
+    <div class="an-chart-max">макс. выручка за день: ${fmtRub(maxRev)} · макс. визитов: ${fmtNum(maxSes)}</div>
+  `;
 }
 
 /* ============================================================
@@ -284,8 +535,8 @@ async function loadProductsTable() {
           <td>${formatCatLabel(p.category)}</td>
           <td>
             <div style="display: flex; align-items: center; gap: 4px;">
-              <input type="number" class="table-price-input" value="${p.price}" 
-                     onchange="updateInlinePrice(${p.id}, this.value)">
+              <input type="number" class="table-price-input" value="${p.price}" data-old="${p.price}"
+                     onchange="updateInlinePrice(${p.id}, this.value, this)">
               <span>₽</span>
             </div>
           </td>
@@ -308,7 +559,13 @@ async function loadProductsTable() {
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
               </button>
-              <button class="admin-btn-icon delete" title="Удалить" onclick="deleteProduct(${p.id}, '${escapeQuote(p.title)}')">
+              <button class="admin-btn-icon" title="Сделать копию (для комбо и вариаций)" onclick="duplicateProduct(${p.id}, '${escapeQuote(p.title)}')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+              <button class="admin-btn-icon delete" title="Удалить в корзину" onclick="deleteProduct(${p.id}, '${escapeQuote(p.title)}')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -326,7 +583,18 @@ async function loadProductsTable() {
   }
 }
 
-async function updateInlinePrice(productId, newPrice) {
+async function updateInlinePrice(productId, newPrice, inputEl) {
+  const oldPrice = inputEl ? inputEl.dataset.old : '';
+  const ok = await adminConfirm({
+    title: 'Изменить цену?',
+    text: `Новая цена: <b>${(parseFloat(newPrice) || 0).toLocaleString('ru-RU')} ₽</b>${oldPrice ? ` (было ${parseFloat(oldPrice).toLocaleString('ru-RU')} ₽)` : ''}. На сайте она изменится сразу.`,
+    confirmText: 'Сохранить цену'
+  });
+  if (!ok) {
+    if (inputEl) inputEl.value = oldPrice;
+    return;
+  }
+  if (inputEl) inputEl.dataset.old = newPrice;
   try {
     const res = await fetch(`/api/admin/products/${productId}/price`, {
       method: 'PATCH',
@@ -343,6 +611,12 @@ async function updateInlinePrice(productId, newPrice) {
 }
 
 async function toggleProductStock(productId, newStockStatus) {
+  const ok = await adminConfirm({
+    title: newStockStatus ? 'Вернуть товар в продажу?' : 'Снять товар с продажи?',
+    text: newStockStatus ? 'Товар снова можно будет купить.' : 'Товар останется в каталоге с пометкой «нет в наличии», купить его будет нельзя.',
+    confirmText: newStockStatus ? 'Вернуть в продажу' : 'Снять с продажи'
+  });
+  if (!ok) return;
   try {
     const res = await fetch(`/api/admin/products/${productId}/stock`, {
       method: 'PATCH',
@@ -359,7 +633,13 @@ async function toggleProductStock(productId, newStockStatus) {
 }
 
 async function deleteProduct(productId, title) {
-  if (!confirm(`Вы действительно хотите удалить товар "${title}"?`)) return;
+  const ok = await adminConfirm({
+    title: 'Удалить товар?',
+    text: `«${escapeHtml(title)}» пропадёт с сайта и попадёт в корзину. Восстановить его можно в течение 30 дней.`,
+    confirmText: 'Удалить в корзину',
+    danger: true
+  });
+  if (!ok) return;
 
   try {
     const res = await fetch(`/api/admin/products/${productId}`, {
@@ -369,12 +649,100 @@ async function deleteProduct(productId, title) {
     if (res.ok) {
       loadProductsTable();
       loadStats();
+      updateTrashCount();
     } else {
       throw new Error('Ошибка при удалении');
     }
   } catch (err) {
     alert(err.message);
   }
+}
+
+// Копия карточки: открывается сразу на редактирование
+async function duplicateProduct(productId, title) {
+  const ok = await adminConfirm({
+    title: 'Сделать копию товара?',
+    text: `Будет создана карточка «${escapeHtml(title)} (копия)» со всеми фото, размерами, цветами и описанием. Её можно сразу отредактировать.`,
+    confirmText: 'Сделать копию'
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/products/${productId}/duplicate`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка копирования');
+    await loadProductsTable();
+    if (!currentProducts.some(p => p.id === data.product.id)) currentProducts.unshift(data.product);
+    editProduct(data.product.id);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+/* ---------- Корзина удалённых товаров ---------- */
+async function updateTrashCount() {
+  const el = document.getElementById('admin-trash-count');
+  if (!el) return;
+  try {
+    const res = await fetch('/api/admin/products-trash', { headers: { 'Authorization': `Bearer ${adminToken}` } });
+    const data = await res.json();
+    const n = (data.items || []).length;
+    el.textContent = n ? String(n) : '';
+  } catch (e) {}
+}
+
+async function openTrashModal() {
+  const modal = document.getElementById('admin-trash-modal');
+  const list = document.getElementById('admin-trash-list');
+  list.innerHTML = '<div class="order-card-sub" style="padding:20px; text-align:center;">Загрузка…</div>';
+  modal.classList.add('open');
+  try {
+    const res = await fetch('/api/admin/products-trash', { headers: { 'Authorization': `Bearer ${adminToken}` } });
+    const data = await res.json();
+    const items = data.items || [];
+    list.innerHTML = items.length ? items.map(i => `
+      <div class="trash-row">
+        <img src="${escapeHtml(i.image || '/assets/placeholder.jpg')}" alt="">
+        <div class="trash-info">
+          <strong>${escapeHtml(i.title)}</strong>
+          <div class="order-card-sub">${i.price ? `${Math.round(i.price).toLocaleString('ru-RU')} ₽ · ` : ''}удалён ${formatDate(i.deleted_at)} · ID ${i.id}</div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="restoreProduct(${i.id}, '${escapeQuote(i.title)}')">Восстановить</button>
+        <button type="button" class="btn btn-sm btn-danger-outline" onclick="purgeProduct(${i.id}, '${escapeQuote(i.title)}')">Удалить навсегда</button>
+      </div>
+    `).join('') : '<div class="order-card-sub" style="padding:20px; text-align:center;">Корзина пуста</div>';
+  } catch (e) {
+    list.innerHTML = '<div style="color:var(--admin-red); padding:20px;">Не удалось загрузить корзину</div>';
+  }
+}
+
+function closeTrashModal() {
+  document.getElementById('admin-trash-modal').classList.remove('open');
+}
+
+async function restoreProduct(id, title) {
+  const ok = await adminConfirm({ title: 'Восстановить товар?', text: `«${escapeHtml(title)}» снова появится в каталоге.`, confirmText: 'Восстановить' });
+  if (!ok) return;
+  const res = await fetch(`/api/admin/products-trash/${id}/restore`, { method: 'POST', headers: { 'Authorization': `Bearer ${adminToken}` } });
+  if (!res.ok) { alert('Не удалось восстановить товар'); return; }
+  openTrashModal();
+  loadProductsTable();
+  updateTrashCount();
+}
+
+async function purgeProduct(id, title) {
+  const ok = await adminConfirm({
+    title: 'Удалить навсегда?',
+    text: `«${escapeHtml(title)}» будет удалён без возможности восстановления.`,
+    confirmText: 'Удалить навсегда',
+    danger: true
+  });
+  if (!ok) return;
+  await fetch(`/api/admin/products-trash/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${adminToken}` } });
+  openTrashModal();
+  updateTrashCount();
 }
 
 /* ============================================================
@@ -404,6 +772,7 @@ function addPhotoUrlFromInput() {
   const val = urlInput.value.trim();
   if (val) {
     uploadedImages.push(val);
+    uploadedImageColors.push('');
     renderImagePreviews();
     urlInput.value = '';
   }
@@ -412,7 +781,11 @@ function addPhotoUrlFromInput() {
 function openAddProductModal() {
   editingProductId = null;
   uploadedImages = [];
+  uploadedImageColors = [];
+  currentColors = [];
   currentSizes = ['16', '17', '18', '19', '20', '21'];
+  currentRelatedIds = [];
+  briefProducts = null; // список для поиска перечитываем при каждом открытии формы
 
   document.getElementById('admin-modal-title').textContent = 'Добавить новый товар';
   document.getElementById('prod-form-title').value = '';
@@ -428,6 +801,7 @@ function openAddProductModal() {
   calcDiscountBadge();
   renderImagePreviews();
   renderSizesTags();
+  renderRelated();
 
   document.getElementById('admin-product-modal-backdrop').classList.add('open');
 }
@@ -439,6 +813,22 @@ function editProduct(productId) {
   editingProductId = productId;
   uploadedImages = Array.isArray(prod.images) ? [...prod.images] : [];
   currentSizes = Array.isArray(prod.sizes) ? [...prod.sizes] : [];
+  currentRelatedIds = Array.isArray(prod.related_ids) ? [...prod.related_ids] : [];
+  briefProducts = null;
+
+  // color_variants[].images — индексы фото; раскладываем их по фото
+  uploadedImageColors = uploadedImages.map(() => '');
+  currentColors = [];
+  (Array.isArray(prod.color_variants) ? prod.color_variants : []).forEach(v => {
+    const id = String(v.id || v.name || '').trim();
+    if (!id || currentColors.some(c => c.id === id)) return;
+    currentColors.push({ id, name: v.name || id, hex: v.hex || '#cccccc' });
+    (Array.isArray(v.images) ? v.images : []).forEach(i => {
+      if (i >= 0 && i < uploadedImageColors.length && !uploadedImageColors[i]) {
+        uploadedImageColors[i] = id;
+      }
+    });
+  });
 
   document.getElementById('admin-modal-title').textContent = `Редактирование: ${prod.title}`;
   document.getElementById('prod-form-title').value = prod.title || '';
@@ -454,6 +844,7 @@ function editProduct(productId) {
   calcDiscountBadge();
   renderImagePreviews();
   renderSizesTags();
+  renderRelated();
 
   document.getElementById('admin-product-modal-backdrop').classList.add('open');
 }
@@ -462,7 +853,7 @@ function closeProductModal() {
   document.getElementById('admin-product-modal-backdrop').classList.remove('open');
 }
 
-async function uploadFiles(fileList) {
+async function uploadFiles(fileList, colorId = '') {
   const formData = new FormData();
   for (let i = 0; i < fileList.length; i++) {
     formData.append('photos', fileList[i]);
@@ -479,6 +870,7 @@ async function uploadFiles(fileList) {
 
     if (data.urls) {
       uploadedImages.push(...data.urls);
+      uploadedImageColors.push(...data.urls.map(() => colorId));
       renderImagePreviews();
     }
   } catch (err) {
@@ -486,21 +878,283 @@ async function uploadFiles(fileList) {
   }
 }
 
+// Общий альбом товара + блок цветов (они зависят друг от друга, поэтому рисуются вместе)
 function renderImagePreviews() {
   const container = document.getElementById('admin-image-previews');
-  if (!container) return;
+  if (container) {
+    const last = uploadedImages.length - 1;
+    container.innerHTML = uploadedImages.map((url, i) => {
+      const colorId = uploadedImageColors[i] || '';
+      const color = currentColors.find(c => c.id === colorId);
+      return `
+        <div class="image-preview-card" draggable="true" data-index="${i}" title="Перетащите, чтобы поменять порядок">
+          <div class="image-preview-item" style="${color ? `border-color:${escapeHtml(color.hex)}` : ''}">
+            <img src="${escapeHtml(url)}">
+            <button type="button" class="image-preview-remove" onclick="removeUploadedImage(${i})" title="Удалить фото">×</button>
+            ${i === 0 ? '<span class="image-preview-main">Главное</span>' : ''}
+          </div>
+          <div class="image-preview-move">
+            <button type="button" onclick="moveUploadedImage(${i}, -1)" ${i === 0 ? 'disabled' : ''} title="Левее">‹</button>
+            <button type="button" onclick="moveUploadedImage(${i}, 1)" ${i === last ? 'disabled' : ''} title="Правее">›</button>
+          </div>
+          ${currentColors.length ? `
+            <select class="image-preview-color" onchange="setImageColor(${i}, this.value)" title="Цвет на фото">
+              <option value="">Без цвета</option>
+              ${currentColors.map(c => `<option value="${escapeHtml(c.id)}" ${c.id === colorId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+            </select>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+    bindPhotoDragAndDrop(container);
+  }
+  renderColorVariants();
+}
 
-  container.innerHTML = uploadedImages.map((url, i) => `
-    <div class="image-preview-item">
-      <img src="${url}">
-      <button type="button" class="image-preview-remove" onclick="removeUploadedImage(${i})">×</button>
-    </div>
-  `).join('');
+// Перетаскивание фото: бросить на другое фото — встать на его место (цвет фото едет вместе с ним)
+function bindPhotoDragAndDrop(container) {
+  let from = null;
+  container.querySelectorAll('.image-preview-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      from = parseInt(card.dataset.index, 10);
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(from));
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      container.querySelectorAll('.drop-target').forEach(c => c.classList.remove('drop-target'));
+    });
+    card.addEventListener('dragover', e => {
+      if (from === null) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      card.classList.add('drop-target');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drop-target'));
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      const to = parseInt(card.dataset.index, 10);
+      if (from === null || from === to) return;
+      const [img] = uploadedImages.splice(from, 1);
+      const [color] = uploadedImageColors.splice(from, 1);
+      uploadedImages.splice(to, 0, img);
+      uploadedImageColors.splice(to, 0, color);
+      from = null;
+      renderImagePreviews();
+    });
+  });
 }
 
 function removeUploadedImage(index) {
   uploadedImages.splice(index, 1);
+  uploadedImageColors.splice(index, 1);
   renderImagePreviews();
+}
+
+function moveUploadedImage(index, delta) {
+  const to = index + delta;
+  if (to < 0 || to >= uploadedImages.length) return;
+  [uploadedImages[index], uploadedImages[to]] = [uploadedImages[to], uploadedImages[index]];
+  [uploadedImageColors[index], uploadedImageColors[to]] = [uploadedImageColors[to], uploadedImageColors[index]];
+  renderImagePreviews();
+}
+
+function setImageColor(index, colorId) {
+  uploadedImageColors[index] = colorId || '';
+  renderImagePreviews();
+}
+
+/* ---------- «Может понравиться» ---------- */
+let currentRelatedIds = [];
+let briefProducts = null;
+
+async function loadBriefProducts() {
+  if (briefProducts) return briefProducts;
+  const res = await fetch('/api/admin/products-brief', { headers: { 'Authorization': `Bearer ${adminToken}` } });
+  const data = await res.json();
+  briefProducts = data.products || [];
+  return briefProducts;
+}
+
+async function renderRelated() {
+  const list = document.getElementById('admin-related-list');
+  if (!list) return;
+  bindRelatedSearch();
+  const all = await loadBriefProducts().catch(() => []);
+  const byId = new Map(all.map(p => [p.id, p]));
+  const items = currentRelatedIds.map(id => byId.get(id)).filter(Boolean);
+  list.innerHTML = items.length ? items.map((p, i) => `
+    <div class="related-item">
+      <img src="${escapeHtml(p.image || '/assets/placeholder.jpg')}" alt="">
+      <div class="related-info">
+        <strong>${escapeHtml(p.title)}</strong>
+        <span>${Math.round(p.price).toLocaleString('ru-RU')} ₽${p.in_stock ? '' : ' · нет в наличии, на сайте не покажется'}</span>
+      </div>
+      <button type="button" onclick="moveRelated(${i}, -1)" ${i === 0 ? 'disabled' : ''} title="Выше">↑</button>
+      <button type="button" onclick="moveRelated(${i}, 1)" ${i === items.length - 1 ? 'disabled' : ''} title="Ниже">↓</button>
+      <button type="button" class="related-remove" onclick="removeRelated(${p.id})" title="Убрать">×</button>
+    </div>
+  `).join('') : '<div class="settings-hint" style="margin:8px 0 0;">Пока не выбрано — на сайте покажутся товары, подобранные автоматически.</div>';
+}
+
+function bindRelatedSearch() {
+  const input = document.getElementById('admin-related-search');
+  const results = document.getElementById('admin-related-results');
+  if (!input || input.dataset.bound) return;
+  input.dataset.bound = '1';
+
+  input.addEventListener('input', async () => {
+    const q = input.value.trim().toLowerCase();
+    if (q.length < 2) { results.hidden = true; return; }
+    const all = await loadBriefProducts();
+    const found = all
+      .filter(p => p.id !== editingProductId && !currentRelatedIds.includes(p.id))
+      .filter(p => `${p.title} ${p.sku || ''}`.toLowerCase().includes(q))
+      .slice(0, 8);
+    results.innerHTML = found.length ? found.map(p => `
+      <li data-id="${p.id}">
+        <img src="${escapeHtml(p.image || '/assets/placeholder.jpg')}" alt="">
+        <span>${escapeHtml(p.title)}</span>
+        <small>${Math.round(p.price).toLocaleString('ru-RU')} ₽</small>
+      </li>
+    `).join('') : '<li class="related-empty">Ничего не найдено</li>';
+    results.hidden = false;
+  });
+
+  results.addEventListener('mousedown', e => {
+    const li = e.target.closest('li[data-id]');
+    if (!li) return;
+    e.preventDefault();
+    if (currentRelatedIds.length >= 12) { alert('Можно выбрать до 12 украшений'); return; }
+    currentRelatedIds.push(parseInt(li.dataset.id, 10));
+    input.value = '';
+    results.hidden = true;
+    renderRelated();
+  });
+  input.addEventListener('blur', () => setTimeout(() => { results.hidden = true; }, 150));
+}
+
+function moveRelated(index, delta) {
+  const to = index + delta;
+  if (to < 0 || to >= currentRelatedIds.length) return;
+  [currentRelatedIds[index], currentRelatedIds[to]] = [currentRelatedIds[to], currentRelatedIds[index]];
+  renderRelated();
+}
+
+function removeRelated(id) {
+  currentRelatedIds = currentRelatedIds.filter(x => x !== id);
+  renderRelated();
+}
+
+/* ---------- Colour variants ---------- */
+function addColorVariant(name, hex) {
+  name = String(name || '').trim();
+  if (!name) return false;
+  if (currentColors.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+    alert(`Цвет «${name}» уже добавлен`);
+    return false;
+  }
+  const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  currentColors.push({ id, name, hex: hex || '#cccccc' });
+  renderImagePreviews();
+  return true;
+}
+
+function addColorPreset(index) {
+  const p = COLOR_PRESETS[index];
+  if (p) addColorVariant(p.name, p.hex);
+}
+
+function updateColorVariant(colorId, field, value) {
+  const color = currentColors.find(c => c.id === colorId);
+  if (!color) return;
+  if (field === 'name') {
+    value = String(value).trim();
+    if (!value) { renderImagePreviews(); return; }
+  }
+  color[field] = value;
+  renderImagePreviews();
+}
+
+async function removeColorVariant(colorId) {
+  const color = currentColors.find(c => c.id === colorId);
+  if (!color) return;
+  const count = uploadedImageColors.filter(id => id === colorId).length;
+  const msg = count
+    ? `Удалить цвет «${color.name}»? Его фото (${count}) останутся в альбоме без цвета.`
+    : `Удалить цвет «${color.name}»?`;
+  if (!(await adminConfirm({ title: 'Удалить цвет?', text: escapeHtml(msg), confirmText: 'Удалить цвет', danger: true }))) return;
+  currentColors = currentColors.filter(c => c.id !== colorId);
+  uploadedImageColors = uploadedImageColors.map(id => (id === colorId ? '' : id));
+  renderImagePreviews();
+}
+
+function pickColorPhotos(colorId) {
+  const input = document.getElementById('admin-color-photo-input');
+  if (!input) return;
+  input.dataset.colorId = colorId;
+  input.click();
+}
+
+function renderColorVariants() {
+  const container = document.getElementById('admin-colors-container');
+  const warningEl = document.getElementById('admin-colors-warning');
+  if (!container) return;
+
+  container.innerHTML = currentColors.map(c => {
+    const photos = uploadedImages
+      .map((url, i) => ({ url, i }))
+      .filter(p => uploadedImageColors[p.i] === c.id);
+    return `
+      <div class="color-card">
+        <div class="color-card-head">
+          <input type="color" class="color-hex-input" value="${escapeHtml(c.hex)}"
+                 onchange="updateColorVariant('${escapeHtml(c.id)}', 'hex', this.value)" title="Оттенок кружка на сайте">
+          <input type="text" class="form-input color-name-input" value="${escapeHtml(c.name)}"
+                 onchange="updateColorVariant('${escapeHtml(c.id)}', 'name', this.value)">
+          <span class="color-card-count">${photos.length} фото</span>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="pickColorPhotos('${escapeHtml(c.id)}')">+ Загрузить фото</button>
+          <button type="button" class="color-card-remove" onclick="removeColorVariant('${escapeHtml(c.id)}')" title="Удалить цвет">×</button>
+        </div>
+        <div class="color-card-photos">
+          ${photos.length
+            ? photos.map(p => `
+                <div class="image-preview-item small">
+                  <img src="${escapeHtml(p.url)}">
+                  <button type="button" class="image-preview-remove" onclick="setImageColor(${p.i}, '')" title="Отвязать от цвета">×</button>
+                </div>
+              `).join('')
+            : '<span class="color-card-empty">Нет фото — на сайте этот цвет не появится</span>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (warningEl) {
+    const untagged = currentColors.length ? uploadedImageColors.filter(id => !id).length : 0;
+    warningEl.textContent = untagged
+      ? `Фото без цвета: ${untagged}. Пока у товара есть цвета, покупатель их не увидит — выберите цвет под каждым фото.`
+      : '';
+  }
+}
+
+// Цвета в формате API: images — индексы фото в итоговом альбоме
+function buildColorVariantsPayload() {
+  return currentColors.map(c => ({
+    id: c.id,
+    name: c.name,
+    hex: c.hex,
+    images: uploadedImageColors
+      .map((id, i) => (id === c.id ? i : -1))
+      .filter(i => i >= 0)
+  }));
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
 }
 
 function renderSizesTags() {
@@ -543,6 +1197,8 @@ async function handleProductFormSubmit(e) {
     price_old: priceOld,
     description,
     images: uploadedImages,
+    color_variants: buildColorVariantsPayload(),
+    related_ids: currentRelatedIds,
     sizes: currentSizes,
     in_stock,
     is_bestseller
@@ -671,7 +1327,7 @@ async function updateReviewStatus(reviewId, newStatus) {
 }
 
 async function deleteReview(reviewId, author) {
-  if (!confirm(`Удалить отзыв от "${author}"?`)) return;
+  if (!(await adminConfirm({ title: 'Удалить отзыв?', text: `Отзыв от «${escapeHtml(author)}» будет удалён без возможности восстановления.`, confirmText: 'Удалить', danger: true }))) return;
 
   try {
     const res = await fetch(`/api/reviews/admin/${reviewId}`, {
@@ -791,6 +1447,106 @@ async function handleReviewFormSubmit(e) {
 /* ============================================================
    Orders Management & Detail Modal
    ============================================================ */
+/* ---------- Подтверждение действий (вместо системного confirm) ---------- */
+function adminConfirm({ title = 'Подтвердите действие', text = '', confirmText = 'Подтвердить', danger = false } = {}) {
+  return new Promise(resolve => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'admin-modal-backdrop open confirm-backdrop';
+    backdrop.innerHTML = `
+      <div class="admin-modal-card confirm-card" role="dialog" aria-modal="true">
+        <h3>${escapeHtml(title)}</h3>
+        ${text ? `<p>${text}</p>` : ''}
+        <div class="confirm-actions">
+          <button type="button" class="btn btn-secondary btn-sm" data-answer="no">Отмена</button>
+          <button type="button" class="btn btn-sm ${danger ? 'btn-danger' : 'btn-primary'}" data-answer="yes">${escapeHtml(confirmText)}</button>
+        </div>
+      </div>
+    `;
+    const close = answer => {
+      document.removeEventListener('keydown', onKey);
+      backdrop.remove();
+      resolve(answer);
+    };
+    const onKey = e => {
+      if (e.key === 'Escape') close(false);
+      if (e.key === 'Enter') close(true);
+    };
+    backdrop.addEventListener('click', e => {
+      const btn = e.target.closest('[data-answer]');
+      if (btn) close(btn.dataset.answer === 'yes');
+      else if (e.target === backdrop) close(false);
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(backdrop);
+    backdrop.querySelector('[data-answer="yes"]').focus();
+  });
+}
+
+/* ---------- Небольшая форма в окне (вместо системного prompt, который работает не везде) ---------- */
+function adminForm({ title, text = '', fields, confirmText = 'Сохранить' }) {
+  return new Promise(resolve => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'admin-modal-backdrop open confirm-backdrop';
+    backdrop.innerHTML = `
+      <form class="admin-modal-card confirm-card" role="dialog" aria-modal="true">
+        <h3>${escapeHtml(title)}</h3>
+        ${text ? `<p>${text}</p>` : ''}
+        ${fields.map(fl => `
+          <div class="form-group">
+            <label class="form-label">${escapeHtml(fl.label)}</label>
+            <input class="form-input" name="${escapeHtml(fl.name)}" type="${fl.type || 'text'}" value="${escapeHtml(fl.value ?? '')}"
+              ${fl.min !== undefined ? `min="${fl.min}"` : ''} ${fl.max !== undefined ? `max="${fl.max}"` : ''} required>
+          </div>
+        `).join('')}
+        <div class="confirm-actions">
+          <button type="button" class="btn btn-secondary btn-sm" data-answer="no">Отмена</button>
+          <button type="submit" class="btn btn-primary btn-sm">${escapeHtml(confirmText)}</button>
+        </div>
+      </form>
+    `;
+    const form = backdrop.querySelector('form');
+    const close = value => { backdrop.remove(); resolve(value); };
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      close(Object.fromEntries(new FormData(form).entries()));
+    });
+    backdrop.addEventListener('click', e => {
+      if (e.target.closest('[data-answer="no"]') || e.target === backdrop) close(null);
+    });
+    backdrop.addEventListener('keydown', e => { if (e.key === 'Escape') close(null); });
+    document.body.appendChild(backdrop);
+    form.querySelector('input').focus();
+  });
+}
+
+/* ---------- Заказы ---------- */
+const ORDER_STATUS_LABELS = {
+  new: 'Ожидает оплаты',
+  paid: 'Оплачен, в обработке',
+  processing: 'Собираем заказ',
+  shipped: 'Передан в доставку',
+  ready_for_pickup: 'Ждёт в пункте выдачи',
+  delivered: 'Получен',
+  completed: 'Получен',
+  returned: 'Возврат',
+  cancelled: 'Отменён'
+};
+const ORDER_STATUS_ORDER = ['new', 'paid', 'processing', 'shipped', 'ready_for_pickup', 'delivered', 'returned', 'cancelled'];
+
+function orderStatusBadge(status) {
+  return `<span class="order-badge order-badge-${escapeHtml(status || 'new')}">${escapeHtml(ORDER_STATUS_LABELS[status] || status)}</span>`;
+}
+
+function paymentBadge(o) {
+  if (o.payment_status === 'paid' || o.status === 'paid') return '<span class="pay-badge pay-ok">Оплачен</span>';
+  if (o.payment_status === 'canceled') return '<span class="pay-badge pay-fail">Оплата не прошла</span>';
+  return '<span class="pay-badge pay-wait">Ожидает оплаты</span>';
+}
+
+function rubles(value) {
+  return `${Math.round(Number(value) || 0).toLocaleString('ru-RU')} ₽`;
+}
+
 async function loadOrdersTable() {
   const tbody = document.getElementById('admin-orders-tbody');
   const statusFilter = document.getElementById('admin-orders-status-filter');
@@ -813,34 +1569,27 @@ async function loadOrdersTable() {
 
     tbody.innerHTML = orders.map(o => `
       <tr>
-        <td><strong>#${o.order_number}</strong></td>
+        <td><strong>#${escapeHtml(o.order_number)}</strong></td>
         <td>${formatDate(o.created_at)}</td>
         <td>
-          <div><strong>${o.customer_name}</strong></div>
-          <div style="font-size:0.8rem; color:#888;">${o.customer_phone}</div>
-        </td>
-        <td>${o.delivery_method}</td>
-        <td>
-          <div><strong>${o.total_price.toLocaleString('ru-RU')} ₽</strong></div>
-          <div style="margin-top:4px;">
-            ${o.payment_status === 'paid' || o.status === 'paid'
-              ? '<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">Оплачен ✅</span>'
-              : '<span style="background:#fff8e1; color:#f57f17; padding:3px 8px; border-radius:10px; font-size:0.75rem; font-weight:600;">Ожидает оплаты</span>'}
-          </div>
+          <div><strong>${escapeHtml(o.customer_name)}</strong></div>
+          <div style="font-size:0.8rem; color:#888;">${escapeHtml(o.customer_phone)}</div>
         </td>
         <td>
-          <select class="filter-select" onchange="updateOrderStatus(${o.id}, this.value)" style="padding:4px 8px; font-size:0.8rem;">
-            <option value="new" ${o.status === 'new' ? 'selected' : ''}>Новый</option>
-            <option value="processing" ${o.status === 'processing' ? 'selected' : ''}>В обработке</option>
-            <option value="shipped" ${o.status === 'shipped' ? 'selected' : ''}>Отправлен</option>
-            <option value="completed" ${o.status === 'completed' ? 'selected' : ''}>Выполнен</option>
-            <option value="cancelled" ${o.status === 'cancelled' ? 'selected' : ''}>Отменен</option>
+          <div>${escapeHtml(o.delivery_method || '—')}</div>
+          ${o.tracking_number ? `<div style="font-size:0.75rem; color:#888;">Трек: ${escapeHtml(o.tracking_number)}</div>` : ''}
+        </td>
+        <td>
+          <div><strong>${rubles(o.total_price)}</strong></div>
+          <div style="margin-top:4px;">${paymentBadge(o)}</div>
+        </td>
+        <td>
+          <select class="filter-select order-status-select" data-current="${escapeHtml(o.status)}" onchange="updateOrderStatus(${o.id}, this.value, this)" style="padding:4px 8px; font-size:0.8rem;">
+            ${ORDER_STATUS_ORDER.map(s => `<option value="${s}" ${(o.status === s || (o.status === 'completed' && s === 'delivered')) ? 'selected' : ''}>${ORDER_STATUS_LABELS[s]}</option>`).join('')}
           </select>
         </td>
         <td>
-          <button class="btn btn-secondary btn-sm" onclick="viewOrderDetails(${o.id})">
-            Детали
-          </button>
+          <button class="btn btn-secondary btn-sm" onclick="viewOrderDetails(${o.id})">Открыть</button>
         </td>
       </tr>
     `).join('');
@@ -850,7 +1599,18 @@ async function loadOrdersTable() {
   }
 }
 
-async function updateOrderStatus(orderId, newStatus) {
+async function updateOrderStatus(orderId, newStatus, selectEl) {
+  const previous = selectEl ? selectEl.dataset.current : null;
+  const ok = await adminConfirm({
+    title: 'Сменить статус заказа?',
+    text: `Новый статус: <b>${escapeHtml(ORDER_STATUS_LABELS[newStatus] || newStatus)}</b>. Покупатель увидит его в личном кабинете.`,
+    confirmText: 'Сменить статус',
+    danger: newStatus === 'cancelled'
+  });
+  if (!ok) {
+    if (selectEl && previous) selectEl.value = previous === 'completed' ? 'delivered' : previous;
+    return false;
+  }
   try {
     const res = await fetch(`/api/admin/orders/${orderId}/status`, {
       method: 'PUT',
@@ -860,80 +1620,245 @@ async function updateOrderStatus(orderId, newStatus) {
       },
       body: JSON.stringify({ status: newStatus })
     });
-    if (res.ok) loadStats();
+    if (!res.ok) throw new Error();
+    if (selectEl) selectEl.dataset.current = newStatus;
+    loadStats();
+    return true;
   } catch (err) {
     alert('Ошибка обновления статуса');
+    if (selectEl && previous) selectEl.value = previous;
+    return false;
   }
 }
 
 async function viewOrderDetails(orderId) {
+  const modal = document.getElementById('admin-order-modal');
+  const contentEl = document.getElementById('admin-order-detail-content');
+  contentEl.innerHTML = '<div style="padding:30px; text-align:center; color:#888;">Загрузка заказа…</div>';
+  modal.classList.add('open');
+
   try {
-    const res = await fetch(`/api/admin/orders?limit=100`, {
+    const res = await fetch(`/api/admin/orders/${orderId}`, {
       headers: { 'Authorization': `Bearer ${adminToken}` }
     });
     const data = await res.json();
-    const order = (data.orders || []).find(o => o.id === orderId);
-    if (!order) return;
-
-    const modal = document.getElementById('admin-order-modal');
-    const contentEl = document.getElementById('admin-order-detail-content');
-
-    const items = Array.isArray(order.items) ? order.items : [];
-
-    contentEl.innerHTML = `
-      <div style="margin-bottom: 20px;">
-        <h3>Заказ #${order.order_number}</h3>
-        <div style="font-size: 0.85rem; color: #888;">Создан: ${formatDate(order.created_at)}</div>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
-        <div class="ui-card">
-          <strong>Информация о клиенте</strong>
-          <div style="margin-top: 8px; font-size: 0.9rem;">
-            <div>Имя: <b>${order.customer_name}</b></div>
-            <div>Телефон: <a href="tel:${order.customer_phone}">${order.customer_phone}</a></div>
-            ${order.customer_email ? `<div>Email: ${order.customer_email}</div>` : ''}
-          </div>
-        </div>
-        <div class="ui-card">
-          <strong>Доставка</strong>
-          <div style="margin-top: 8px; font-size: 0.9rem;">
-            <div>Способ: <b>${order.delivery_method}</b></div>
-            <div>Адрес / ПВЗ: ${order.delivery_address || 'Не указан'}</div>
-            ${order.comment ? `<div>Комментарий: <i>${order.comment}</i></div>` : ''}
-          </div>
-        </div>
-      </div>
-
-      <h4>Состав заказа:</h4>
-      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
-        ${items.map(item => `
-          <div style="display: flex; gap: 12px; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px;">
-            <img src="${item.image || '/assets/placeholder.jpg'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;">
-            <div style="flex: 1;">
-              <strong>${item.title}</strong>
-              ${item.size ? `<div style="font-size: 0.85rem; color: #666;">Размер: ${item.size}</div>` : ''}
-              ${item.is_custom && item.custom_details ? `
-                <div style="font-size: 0.8rem; background: #f0f0f0; padding: 4px 8px; border-radius: 4px; margin-top: 4px;">
-                  ⚙️ Металл: ${item.custom_details.metal || '-'} | Текст: "${item.custom_details.text || '-'}" | Шрифт: ${item.custom_details.font || '-'}
-                </div>
-              ` : ''}
-            </div>
-            <div>
-              <b>${item.quantity} шт. × ${item.price} ₽</b>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-
-      <div style="margin-top: 20px; text-align: right; font-size: 1.2rem;">
-        Итого к оплате: <b>${order.total_price.toLocaleString('ru-RU')} ₽</b>
-      </div>
-    `;
-
-    modal.classList.add('open');
+    if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
+    renderOrderCard(data);
   } catch (e) {
-    console.error(e);
+    contentEl.innerHTML = `<div style="padding:30px; color:var(--admin-red);">Не удалось загрузить заказ: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderOrderCard({ order: o, history, customer }) {
+  const contentEl = document.getElementById('admin-order-detail-content');
+  const items = Array.isArray(o.items) ? o.items : [];
+  const itemsCount = items.reduce((n, i) => n + (parseInt(i.quantity, 10) || 1), 0);
+  const deliveryType = { pvz: 'Пункт выдачи / постамат', courier: 'Курьер до двери' }[o.delivery_type] || '';
+  const trackingUrl = o.tracking_number && o.delivery_provider === 'cdek'
+    ? `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(o.tracking_number)}` : '';
+  const canCreateShipment = o.delivery_provider === 'cdek' && !o.shipment_uuid && o.status !== 'cancelled';
+  const copyText = [
+    `Заказ ${o.order_number}`, o.customer_name, o.customer_phone, o.customer_email,
+    `${o.delivery_method || ''}: ${o.delivery_address || ''}`,
+    ...items.map(i => `${i.title}${i.size ? `, р. ${i.size}` : ''}${i.color ? `, ${i.color}` : ''} × ${i.quantity}`)
+  ].filter(Boolean).join('\n');
+
+  contentEl.innerHTML = `
+    <div class="order-card-head">
+      <div>
+        <h3>Заказ #${escapeHtml(o.order_number)}</h3>
+        <div class="order-card-sub">Создан ${formatDate(o.created_at)}${o.device ? ` · ${{ mobile: 'с телефона', tablet: 'с планшета', desktop: 'с компьютера' }[o.device] || ''}` : ''}</div>
+      </div>
+      <div class="order-card-badges">${orderStatusBadge(o.status)} ${paymentBadge(o)}</div>
+    </div>
+
+    <div class="order-timeline">
+      ${history.map(h => `
+        <div class="order-timeline-step">
+          <span class="order-timeline-dot"></span>
+          <div><b>${escapeHtml(h.label)}</b><div class="order-card-sub">${formatDate(h.created_at)}</div></div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="order-card-grid">
+      <div class="ui-card">
+        <strong>Покупатель</strong>
+        <div class="order-card-lines">
+          <div>${escapeHtml(o.customer_name)}</div>
+          <div><a href="tel:${escapeHtml(o.customer_phone)}">${escapeHtml(o.customer_phone)}</a></div>
+          ${o.customer_email ? `<div><a href="mailto:${escapeHtml(o.customer_email)}">${escapeHtml(o.customer_email)}</a></div>` : ''}
+          <div class="order-card-sub">Заказов у покупателя: ${customer.orders_count}${customer.paid_sum ? ` · оплачено всего ${rubles(customer.paid_sum)}` : ''}</div>
+          ${o.customer_id ? '<div class="order-card-sub">Есть личный кабинет</div>' : ''}
+        </div>
+      </div>
+
+      <div class="ui-card">
+        <strong>Доставка</strong>
+        <div class="order-card-lines">
+          <div><b>${escapeHtml(o.delivery_method || '—')}</b>${deliveryType ? ` · ${deliveryType}` : ''}</div>
+          <div>${escapeHtml(o.delivery_address || 'Адрес не указан')}</div>
+          ${o.delivery_point_id ? `<div class="order-card-sub">Код пункта: ${escapeHtml(o.delivery_point_id)}</div>` : ''}
+          ${o.tracking_number ? `<div>Трек-номер: <b>${escapeHtml(o.tracking_number)}</b>${trackingUrl ? ` · <a href="${trackingUrl}" target="_blank" rel="noopener">отследить</a>` : ''}</div>` : ''}
+          ${o.shipment_status ? `<div class="order-card-sub">Статус СДЭК: ${escapeHtml(o.shipment_status)}${o.shipment_synced_at ? ` (обновлён ${formatDate(o.shipment_synced_at)})` : ''}</div>` : ''}
+          ${o.shipment_error ? `<div class="order-card-error">Ошибка СДЭК: ${escapeHtml(o.shipment_error)}</div>` : ''}
+          <div class="order-card-actions">
+            ${canCreateShipment ? `<button type="button" class="btn btn-primary btn-sm" onclick="createOrderShipment(${o.id})">Передать в СДЭК</button>` : ''}
+            ${o.shipment_uuid ? `<button type="button" class="btn btn-secondary btn-sm" onclick="syncOrderShipment(${o.id})">Обновить статус из СДЭК</button>` : ''}
+          </div>
+          ${!o.delivery_provider ? '<div class="order-card-sub">Заказ оформлен без выбора перевозчика — отправление создаётся вручную.</div>' : ''}
+        </div>
+      </div>
+    </div>
+
+    ${o.comment ? `<div class="ui-card order-comment"><strong>Комментарий покупателя</strong><div>${escapeHtml(o.comment)}</div></div>` : ''}
+
+    <h4 style="margin: 20px 0 10px;">Состав заказа · ${itemsCount} шт.</h4>
+    <div class="order-items">
+      ${items.map(item => `
+        <div class="order-item">
+          <img src="${escapeHtml(item.image || '/assets/placeholder.jpg')}" alt="">
+          <div class="order-item-info">
+            <strong>${escapeHtml(item.title)}</strong>
+            <div class="order-card-sub">
+              ${[item.size ? `Размер: ${escapeHtml(item.size)}` : '', item.color ? `Цвет: ${escapeHtml(item.color)}` : '', item.id && !item.is_custom ? `ID ${escapeHtml(item.id)}` : ''].filter(Boolean).join(' · ')}
+            </div>
+            ${item.is_custom && item.custom_details ? `
+              <div class="order-item-custom">⚙️ Металл: ${escapeHtml(item.custom_details.metal || '-')} · Текст: «${escapeHtml(item.custom_details.text || '-')}» · Шрифт: ${escapeHtml(item.custom_details.font || '-')}</div>
+            ` : ''}
+          </div>
+          <div class="order-item-price">${item.quantity} × ${rubles(item.price)}<br><b>${rubles(item.price * item.quantity)}</b></div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="order-totals">
+      <div><span>Товары</span><span>${rubles(o.subtotal)}</span></div>
+      ${o.discount_amount ? `<div><span>Скидка</span><span>−${rubles(o.discount_amount)}</span></div>` : ''}
+      ${o.bonus_used ? `<div><span>Оплачено бонусами</span><span>−${rubles(o.bonus_used)}</span></div>` : ''}
+      ${o.promo_code ? `<div><span>Промокод</span><span>${escapeHtml(o.promo_code)}</span></div>` : ''}
+      <div><span>Доставка</span><span>${o.delivery_price ? rubles(o.delivery_price) : 'бесплатно'}</span></div>
+      <div class="order-totals-total"><span>Итого</span><span>${rubles(o.total_price)}</span></div>
+      <div class="order-card-sub">${o.paid_at ? `Оплачен ${formatDate(o.paid_at)}` : 'Оплата не поступала'}${o.payment_id ? ` · платёж ${escapeHtml(o.payment_id)}` : ''}</div>
+    </div>
+
+    <div class="order-card-actions" style="margin-top:16px;">
+      <button type="button" class="btn btn-secondary btn-sm" id="order-copy-btn">Скопировать данные</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="order-print-btn">🖨 Упаковочный лист</button>
+      ${o.status !== 'cancelled' ? `<button type="button" class="btn btn-sm btn-danger-outline" onclick="cancelOrderFromCard(${o.id})">Отменить заказ</button>` : ''}
+    </div>
+    ${o.pd_consent_at ? `<div class="order-card-sub" style="margin-top:10px;">Согласие на обработку ПД: ${formatDate(o.pd_consent_at)}</div>` : ''}
+  `;
+
+  document.getElementById('order-print-btn').addEventListener('click', () => printPackingSlip(o));
+
+  document.getElementById('order-copy-btn').addEventListener('click', async e => {
+    try {
+      await navigator.clipboard.writeText(copyText);
+      e.target.textContent = 'Скопировано';
+    } catch (err) {
+      e.target.textContent = 'Не удалось скопировать';
+    }
+  });
+}
+
+// Выгрузка заказов в CSV для Excel (с учётом фильтра статуса и дат)
+async function exportOrders() {
+  const params = new URLSearchParams({
+    status: (document.getElementById('admin-orders-status-filter') || {}).value || 'all',
+    from: document.getElementById('orders-export-from').value,
+    to: document.getElementById('orders-export-to').value
+  });
+  try {
+    const res = await fetch(`/api/admin/orders-export?${params}`, { headers: { 'Authorization': `Bearer ${adminToken}` } });
+    if (!res.ok) throw new Error('Не удалось выгрузить заказы');
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1] || 'orders.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// Упаковочный лист: состав для сборки, получатель и доставка — печать на A4
+function printPackingSlip(o) {
+  const items = Array.isArray(o.items) ? o.items : [];
+  const count = items.reduce((n, i) => n + (parseInt(i.quantity, 10) || 1), 0);
+  const w = window.open('', '_blank', 'width=800,height=900');
+  if (!w) { alert('Разрешите всплывающие окна, чтобы распечатать лист'); return; }
+  w.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Упаковочный лист ${escapeHtml(o.order_number)}</title>
+    <style>
+      body { font-family: Arial, sans-serif; color: #111; margin: 24px; }
+      h1 { font-size: 22px; margin: 0 0 4px; } .sub { color: #666; font-size: 13px; margin-bottom: 18px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; font-size: 14px; line-height: 1.5; }
+      .box { border: 1px solid #ccc; border-radius: 6px; padding: 10px 12px; } .box b.t { display: block; margin-bottom: 4px; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; } th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
+      th { background: #f3f3f3; } td.c { text-align: center; width: 60px; } td.chk { width: 40px; }
+      .total { margin-top: 12px; font-size: 14px; } .note { margin-top: 18px; font-size: 13px; color: #444; }
+      @media print { body { margin: 10mm; } button { display: none; } }
+    </style></head><body>
+    <button onclick="print()" style="float:right;padding:8px 14px;">Печать</button>
+    <h1>Заказ ${escapeHtml(o.order_number)}</h1>
+    <div class="sub">от ${formatDate(o.created_at)} · ${escapeHtml(ORDER_STATUS_LABELS[o.status] || o.status)} · ${o.payment_status === 'paid' ? 'оплачен' : 'НЕ ОПЛАЧЕН'}</div>
+    <div class="grid">
+      <div class="box"><b class="t">Получатель</b>${escapeHtml(o.customer_name)}<br>${escapeHtml(o.customer_phone)}<br>${escapeHtml(o.customer_email || '')}</div>
+      <div class="box"><b class="t">Доставка</b>${escapeHtml(o.delivery_method || '')}<br>${escapeHtml(o.delivery_address || '')}${o.tracking_number ? `<br>Трек: <b>${escapeHtml(o.tracking_number)}</b>` : ''}</div>
+    </div>
+    <table>
+      <tr><th class="chk">✓</th><th>Изделие</th><th>Размер</th><th>Цвет</th><th>Кол-во</th></tr>
+      ${items.map(i => `<tr><td class="chk"></td><td>${escapeHtml(i.title)}${i.is_custom && i.custom_details ? `<br><small>${escapeHtml(typeof i.custom_details === 'string' ? i.custom_details : JSON.stringify(i.custom_details))}</small>` : ''}</td><td class="c">${escapeHtml(i.size || '—')}</td><td>${escapeHtml(i.color || '—')}</td><td class="c">${i.quantity || 1}</td></tr>`).join('')}
+    </table>
+    <div class="total">Всего изделий: <b>${count}</b> · Сумма заказа: <b>${rubles(o.total_price)}</b></div>
+    ${o.comment ? `<div class="note"><b>Комментарий покупателя:</b> ${escapeHtml(o.comment)}</div>` : ''}
+    </body></html>`);
+  w.document.close();
+}
+
+async function createOrderShipment(orderId) {
+  const ok = await adminConfirm({
+    title: 'Передать заказ в СДЭК?',
+    text: 'В СДЭК будет создано отправление с данными покупателя и составом заказа. После этого статус доставки будет обновляться автоматически.',
+    confirmText: 'Создать отправление'
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/orders/${orderId}/shipment`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    setTimeout(() => viewOrderDetails(orderId), 5000);
+    viewOrderDetails(orderId);
+    loadOrdersTable();
+  } catch (e) {
+    alert(`Не удалось создать отправление: ${e.message}`);
+  }
+}
+
+async function syncOrderShipment(orderId) {
+  try {
+    const res = await fetch(`/api/admin/orders/${orderId}/sync`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    viewOrderDetails(orderId);
+    loadOrdersTable();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function cancelOrderFromCard(orderId) {
+  if (await updateOrderStatus(orderId, 'cancelled')) {
+    viewOrderDetails(orderId);
+    loadOrdersTable();
   }
 }
 
@@ -971,6 +1896,29 @@ async function loadSettings() {
     if (elYooKey) elYooKey.value = s.yookassa_secret_key || '';
     if (elYooTest) elYooTest.checked = s.yookassa_test_mode !== '0';
     if (elWebhook) elWebhook.textContent = `${window.location.origin}/api/payments/webhook`;
+
+    const setVal = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+    setVal('setting-free-delivery', s.free_delivery_threshold ?? '7000');
+    setVal('setting-parcel-weight', s.delivery_parcel_weight_g || '300');
+    setVal('setting-item-weight', s.delivery_item_weight_g || '50');
+    setVal('setting-cdek-id', s.cdek_client_id || '');
+    setVal('setting-cdek-secret', s.cdek_client_secret || '');
+    setVal('setting-cdek-city', s.cdek_sender_city_code || '250');
+    setVal('setting-cdek-shipment-point', s.cdek_shipment_point || '');
+    setVal('setting-ya-token', s.yandex_delivery_token || '');
+    setVal('setting-ya-station', s.yandex_delivery_station_id || '');
+    setVal('setting-dadata-key', s.dadata_api_key || '');
+    setVal('setting-smtp-user', s.smtp_user || '');
+    setVal('setting-smtp-password', s.smtp_password || '');
+    setVal('setting-mail-from-name', s.mail_from_name || 'САПС');
+    setVal('setting-smtp-host', s.smtp_host || 'smtp.beget.com');
+    setVal('setting-smtp-port', s.smtp_port || '465');
+    const emailsOn = document.getElementById('setting-emails-enabled');
+    if (emailsOn) emailsOn.checked = s.emails_enabled === '1';
+    const cdekTest = document.getElementById('setting-cdek-test');
+    if (cdekTest) cdekTest.checked = s.cdek_test_mode !== '0';
+    const yaTest = document.getElementById('setting-ya-test');
+    if (yaTest) yaTest.checked = s.yandex_delivery_test_mode !== '0';
   } catch (err) {
     console.error('Error loading settings:', err);
   }
@@ -989,6 +1937,32 @@ async function handleSettingsSubmit(e) {
     yookassa_test_mode: document.getElementById('setting-yoo-test-mode') && document.getElementById('setting-yoo-test-mode').checked ? '1' : '0'
   };
 
+  // Доставка: перевозчики и параметры посылки
+  const deliveryFields = {
+    free_delivery_threshold: 'setting-free-delivery',
+    delivery_parcel_weight_g: 'setting-parcel-weight',
+    delivery_item_weight_g: 'setting-item-weight',
+    cdek_client_id: 'setting-cdek-id',
+    cdek_client_secret: 'setting-cdek-secret',
+    cdek_sender_city_code: 'setting-cdek-city',
+    cdek_shipment_point: 'setting-cdek-shipment-point',
+    yandex_delivery_token: 'setting-ya-token',
+    yandex_delivery_station_id: 'setting-ya-station',
+    dadata_api_key: 'setting-dadata-key',
+    smtp_user: 'setting-smtp-user',
+    smtp_password: 'setting-smtp-password',
+    mail_from_name: 'setting-mail-from-name',
+    smtp_host: 'setting-smtp-host',
+    smtp_port: 'setting-smtp-port'
+  };
+  Object.entries(deliveryFields).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) payload[key] = el.value.trim();
+  });
+  payload.cdek_test_mode = document.getElementById('setting-cdek-test')?.checked ? '1' : '0';
+  payload.emails_enabled = document.getElementById('setting-emails-enabled')?.checked ? '1' : '0';
+  payload.yandex_delivery_test_mode = document.getElementById('setting-ya-test')?.checked ? '1' : '0';
+
   try {
     const res = await fetch('/api/admin/settings', {
       method: 'POST',
@@ -998,9 +1972,32 @@ async function handleSettingsSubmit(e) {
       },
       body: JSON.stringify(payload)
     });
-    if (res.ok) alert('Настройки сохранены успешно!');
+    if (res.ok && !e.silent) alert('Настройки сохранены успешно!');
   } catch (e) {
     alert('Ошибка сохранения настроек');
+  }
+}
+
+// Тестовое письмо: сначала сохраняем настройки, потом проверяем SMTP
+async function sendTestEmail() {
+  const resultEl = document.getElementById('setting-test-email-result');
+  const to = document.getElementById('setting-test-email-to').value.trim();
+  resultEl.style.color = '#777';
+  resultEl.textContent = 'Сохраняем настройки и отправляем…';
+  try {
+    await handleSettingsSubmit({ preventDefault() {}, silent: true });
+    const res = await fetch('/api/admin/test-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+      body: JSON.stringify({ to })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка отправки');
+    resultEl.style.color = '#15803d';
+    resultEl.textContent = `Письмо отправлено на ${to}. Проверьте входящие и папку «Спам».`;
+  } catch (e) {
+    resultEl.style.color = 'var(--admin-red)';
+    resultEl.textContent = e.message;
   }
 }
 
@@ -1078,11 +2075,17 @@ async function loadCustomersTable() {
 }
 
 async function editCustomerBonuses(customerId, name, currentBonuses, currentDiscount) {
-  const newBonuses = prompt(`Изменить бонусы для ${name}:`, currentBonuses);
-  if (newBonuses === null) return;
-
-  const newDiscount = prompt(`Изменить персональную скидку (%) для ${name}:`, currentDiscount);
-  if (newDiscount === null) return;
+  const values = await adminForm({
+    title: `Бонусы и скидка: ${name}`,
+    text: `Сейчас: ${escapeHtml(currentBonuses)} бонусов, скидка ${escapeHtml(currentDiscount)}%. Изменения увидит покупатель в личном кабинете.`,
+    fields: [
+      { name: 'bonuses', label: 'Бонусы', type: 'number', value: currentBonuses, min: 0 },
+      { name: 'discount', label: 'Персональная скидка, %', type: 'number', value: currentDiscount, min: 0, max: 50 }
+    ]
+  });
+  if (!values) return;
+  const newBonuses = values.bonuses;
+  const newDiscount = values.discount;
 
   try {
     const res = await fetch(`/api/admin/customers/${customerId}`, {
@@ -1227,7 +2230,7 @@ async function handlePromoFormSubmit(e) {
 }
 
 async function deletePromoCode(id, code) {
-  if (!confirm(`Удалить промокод "${code}"?`)) return;
+  if (!(await adminConfirm({ title: 'Удалить промокод?', text: `Промокод «${escapeHtml(code)}» перестанет работать.`, confirmText: 'Удалить', danger: true }))) return;
 
   try {
     const res = await fetch(`/api/admin/promo-codes/${id}`, {

@@ -135,10 +135,14 @@ router.post('/upload', upload.array('photos', 5), (req, res) => {
 // POST /api/reviews — Public submission of new review (STRICT: Purchased items/orders only!)
 router.post('/', optionalCustomer, (req, res) => {
   try {
-    const { product_id, order_id, author_name, city = '', rating = 5, text, photos = [] } = req.body;
+    const { product_id, order_id, author_name, city = '', rating = 5, text, photos = [], pd_consent = false, publish_consent = false } = req.body;
 
     if (!author_name || !text) {
       return res.status(400).json({ error: 'Пожалуйста, укажите имя и текст отзыва' });
+    }
+
+    if (pd_consent !== true || publish_consent !== true) {
+      return res.status(400).json({ error: 'Подтвердите согласие на обработку и публикацию персональных данных' });
     }
 
     let customerId = req.customer ? req.customer.id : null;
@@ -200,8 +204,8 @@ router.post('/', optionalCustomer, (req, res) => {
     }
 
     const stmt = db.prepare(`
-      INSERT INTO reviews (customer_id, order_id, product_id, author_name, city, rating, text, photos, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+      INSERT INTO reviews (customer_id, order_id, product_id, author_name, city, rating, text, photos, status, pd_consent_at, publish_consent_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
     `);
 
     const result = stmt.run(

@@ -2607,3 +2607,157 @@ img {
 }
 
 
+
+/* ============================================================
+   Legal documents, legal footer strip, consent checkboxes
+   ============================================================ */
+.legal-doc {
+  padding: 60px 24px;
+  max-width: 860px;
+  line-height: 1.75;
+}
+
+.legal-doc h1 {
+  margin-bottom: 8px;
+}
+
+.legal-doc h3 {
+  margin: 32px 0 12px;
+  font-size: 1.1rem;
+}
+
+.legal-doc p,
+.legal-doc li {
+  margin-bottom: 10px;
+  font-size: 0.95rem;
+}
+
+.legal-doc ul {
+  padding-left: 22px;
+  margin-bottom: 12px;
+}
+
+.legal-doc a {
+  color: #000;
+  text-decoration: underline;
+}
+
+.legal-doc-subtitle {
+  font-weight: 600;
+}
+
+.legal-doc-meta {
+  color: #888;
+  font-size: 0.85rem !important;
+  margin-bottom: 24px !important;
+}
+
+.legal-requisites {
+  list-style: none;
+  padding-left: 0 !important;
+}
+
+.legal-table-wrap {
+  overflow-x: auto;
+  margin: 12px 0 20px;
+}
+
+.legal-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.legal-table th,
+.legal-table td {
+  border: 1px solid #e2e2e2;
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.legal-table th {
+  background: #f5f5f5;
+  font-weight: 700;
+}
+
+.site-footer--legal {
+  padding: 40px 0 24px;
+}
+
+.legal-strip {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 24px;
+  margin-top: 24px;
+  color: #888;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.site-footer--legal .legal-strip {
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.legal-strip-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-bottom: 12px;
+}
+
+.legal-strip a {
+  color: #aaa;
+}
+
+.legal-strip a:hover {
+  color: #fff;
+}
+
+.legal-strip-copy {
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 16px;
+}
+
+.consent-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+
+.consent-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #555;
+  cursor: pointer;
+}
+
+.consent-check input {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  flex-shrink: 0;
+  accent-color: #000;
+}
+
+.consent-check a {
+  color: #000;
+  text-decoration: underline;
+}
+
+/* iPhone увеличивает страницу при фокусе на поле со шрифтом меньше 16px — на телефонах держим 16px */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}

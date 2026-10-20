@@ -3,8 +3,12 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
+const orderStatus = require('../services/orderStatus');
+const cdekShipments = require('../services/cdekShipments');
 
-const CUSTOMER_JWT_SECRET = process.env.CUSTOMER_JWT_SECRET || 'sups_customer_secret_key_2026';
+const { getSecret } = require('../services/secrets');
+
+const CUSTOMER_JWT_SECRET = getSecret('customer_jwt', 'CUSTOMER_JWT_SECRET');
 
 function generateUserCode() {
   const num = Math.floor(1000 + Math.random() * 9000);
@@ -72,7 +76,11 @@ function optionalCustomer(req, res, next) {
 // POST /api/customers/register
 router.post('/register', (req, res) => {
   try {
-    const { name, email, phone, birthdate, password } = req.body;
+    const { name, email, phone, birthdate, password, agreement_accepted = false, pd_consent = false } = req.body;
+
+    if (agreement_accepted !== true || pd_consent !== true) {
+      return res.status(400).json({ error: 'Подтвердите согласие с пользовательским соглашением и на обработку персональных данных' });
+    }
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Пожалуйста, заполните имя, email и пароль' });
@@ -95,8 +103,8 @@ router.post('/register', (req, res) => {
 
     // Give 100 welcome bonus points
     const stmt = db.prepare(`
-      INSERT INTO customers (user_code, name, email, phone, birthdate, password_hash, bonus_points, personal_discount, total_spent)
-      VALUES (?, ?, ?, ?, ?, ?, 100, 0, 0)
+      INSERT INTO customers (user_code, name, email, phone, birthdate, password_hash, bonus_points, personal_discount, total_spent, pd_consent_at)
+      VALUES (?, ?, ?, ?, ?, ?, 100, 0, 0, datetime('now'))
     `);
 
     const result = stmt.run(userCode, name.trim(), cleanEmail, phone ? phone.trim() : '', birthdate ? birthdate.trim() : '', hash);
@@ -203,10 +211,36 @@ router.get('/orders', requireCustomer, (req, res) => {
       ORDER BY id DESC
     `).all(req.customer.id, req.customer.email, req.customer.phone || 'NO_PHONE');
 
+    const historyStmt = db.prepare('SELECT status, created_at FROM order_status_history WHERE order_id = ? ORDER BY id');
     const orders = rows.map(o => ({
-      ...o,
-      items: JSON.parse(o.items || '[]')
+      id: o.id,
+      order_number: o.order_number,
+      created_at: o.created_at,
+      items: JSON.parse(o.items || '[]'),
+      subtotal: o.subtotal,
+      discount_amount: o.discount_amount,
+      bonus_used: o.bonus_used,
+      delivery_price: o.delivery_price,
+      total_price: o.total_price,
+      status: o.status,
+      status_label: orderStatus.label(o.status),
+      payment_status: o.payment_status,
+      paid_at: o.paid_at,
+      delivery_method: o.delivery_method,
+      delivery_address: o.delivery_address,
+      delivery_type: o.delivery_type,
+      tracking_number: o.tracking_number,
+      tracking_url: o.tracking_number && o.delivery_provider === 'cdek'
+        ? `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(o.tracking_number)}`
+        : null,
+      shipment_status: o.shipment_status,
+      history: historyStmt.all(o.id).map(h => ({ ...h, label: orderStatus.label(h.status) }))
     }));
+
+    // Статусы доставки, которые давно не обновлялись, подтягиваем из СДЭК в фоне
+    rows.filter(o => o.shipment_uuid && !['delivered', 'completed', 'cancelled', 'returned'].includes(o.status))
+      .filter(o => !o.shipment_synced_at || Date.now() - Date.parse(`${o.shipment_synced_at.replace(' ', 'T')}Z`) > 15 * 60 * 1000)
+      .forEach(o => cdekShipments.syncShipment(o.id).catch(err => console.warn('CDEK sync (account):', err.message)));
 
     res.json({ orders });
   } catch (err) {

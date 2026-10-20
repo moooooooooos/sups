@@ -272,7 +272,9 @@
 .checkout-view {
   display: none;
   flex-direction: column;
-  height: 100%;
+  /* Занимает место под шапкой корзины: с height: 100% низ формы с кнопкой уходил за экран */
+  flex: 1;
+  min-height: 0;
 }
 
 .checkout-view.active {
@@ -402,4 +404,177 @@
   font-size: 0.95rem;
   line-height: 1.5;
   margin-bottom: 24px;
+}
+
+/* ============================================================
+   Delivery widget (js/delivery.js)
+   ============================================================ */
+.delivery-widget .form-group {
+  margin-bottom: 14px;
+}
+
+.dw-suggest {
+  position: relative;
+}
+
+.dw-list {
+  position: absolute;
+  z-index: 30;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #e2e2e2;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.dw-list li {
+  padding: 9px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.dw-list li:hover {
+  background: #f3f3f3;
+}
+
+.dw-list li em {
+  color: #999;
+  font-style: normal;
+}
+
+.dw-empty,
+.dw-loading,
+.dw-hint {
+  font-size: 0.8rem;
+  color: #888;
+  padding: 6px 2px;
+}
+
+.dw-list li.dw-empty {
+  cursor: default;
+}
+
+.dw-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dw-options .delivery-option-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dw-option-meta {
+  font-size: 0.78rem;
+  color: #666;
+}
+
+.dw-pvz-list {
+  margin-top: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid #e8e8e8;
+  border-radius: 10px;
+}
+
+.dw-point {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.dw-point:last-child {
+  border-bottom: none;
+}
+
+.dw-point.selected {
+  background: #f5f5f5;
+}
+
+.dw-point input {
+  margin-top: 3px;
+  accent-color: #000;
+}
+
+.dw-point small {
+  display: block;
+  color: #888;
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+.dw-address-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dw-address-row input[hidden] {
+  display: none;
+}
+
+.dw-summary-ok {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f1f8f2;
+  color: #1f5f2c;
+  margin-bottom: 8px;
+}
+
+.dw-summary-ok span {
+  color: #444;
+}
+
+.dw-error,
+.dw-field-error {
+  color: #d93838;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.dw-error:empty,
+.dw-field-error:empty {
+  display: none;
+}
+
+.dw-field-error {
+  margin-top: 4px;
+}
+
+.dw-fix-email {
+  border: none;
+  background: none;
+  padding: 0;
+  color: #000;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.form-input.dw-invalid {
+  border-color: #d93838;
 }

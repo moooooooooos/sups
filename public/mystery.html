@@ -13,7 +13,7 @@
   
   <!-- CSS -->
   <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/catalog.css?v=20261005a">
+  <link rel="stylesheet" href="/css/catalog.css?v=20261020a">
   <link rel="stylesheet" href="/css/cart.css">
 </head>
 <body data-category="mystery">
@@ -173,9 +173,10 @@
             <li><a href="/#reviews">Отзывы</a></li>
             <li><a href="/#addresses">Адреса магазинов</a></li>
             <li><a href="/leave-review">Написать отзыв</a></li>
-            <li><a href="/privacy">Политика конфиденциальности</a></li>
+            <li><a href="/privacy">Политика обработки ПД</a></li>
             <li><a href="/agreement">Пользовательское соглашение</a></li>
-            <li><a href="/offer">Оферта</a></li>
+            <li><a href="/offer">Публичная оферта</a></li>
+            <li><a href="/consent">Согласие на обработку ПД</a></li>
           </ul>
         </div>
 
@@ -196,7 +197,7 @@
 
       <div class="footer-bottom">
         <div>© 2026 САПС (sups-official.ru). Все права защищены.</div>
-        <div class="footer-requisites">Доставка по всей России (СДЭК, Почта России)</div>
+        <div class="footer-requisites">Доставка по всей России (СДЭК, Яндекс Доставка)</div>
       </div>
     </div>
   </footer>
@@ -304,32 +305,12 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Email для чека</label>
-              <input type="email" id="order-email" class="form-input" placeholder="mail@example.com">
+              <label class="form-label">Email для чека *</label>
+              <input type="email" id="order-email" class="form-input" placeholder="mail@example.com" required>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Способ доставки</label>
-              <div class="delivery-options">
-                <div class="delivery-option-card selected" data-method="cdek_pvz" data-price="350">
-                  <strong>СДЭК (ПВЗ)</strong>
-                  <div style="font-size:0.75rem; color:#666;">350 ₽ (2-4 дня)</div>
-                </div>
-                <div class="delivery-option-card" data-method="cdek_courier" data-price="550">
-                  <strong>СДЭК (Курьер)</strong>
-                  <div style="font-size:0.75rem; color:#666;">550 ₽ (курьером в руки)</div>
-                </div>
-                <div class="delivery-option-card" data-method="post" data-price="390">
-                  <strong>Почта России</strong>
-                  <div style="font-size:0.75rem; color:#666;">390 ₽ (по всей РФ)</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Город и адрес доставки / пункт выдачи *</label>
-              <input type="text" id="order-address" class="form-input" placeholder="г. Москва, ул. Ленина, д. 5 (или адрес ПВЗ)" required>
-            </div>
+            <!-- Доставка: город, способ, ПВЗ или адрес — js/delivery.js -->
+            <div id="delivery-widget" class="delivery-widget"></div>
 
             <div class="form-group">
               <label class="form-label">Комментарий к заказу</label>
@@ -351,6 +332,10 @@
               </div>
             </div>
 
+            <div class="consent-checks">
+              <label class="consent-check"><input type="checkbox" id="order-consent-offer" required><span>Я ознакомлен(а) с <a href="/offer" target="_blank">публичной офертой</a> и принимаю её условия</span></label>
+              <label class="consent-check"><input type="checkbox" id="order-consent-pd" required><span>Даю <a href="/consent" target="_blank">согласие на обработку персональных данных</a> в соответствии с <a href="/privacy" target="_blank">политикой</a></span></label>
+            </div>
             <button type="submit" id="btn-submit-order" class="btn btn-primary" style="width:100%; padding:16px; margin-top:14px;">
               Подтвердить заказ
             </button>
@@ -380,6 +365,13 @@
           <div class="modal-pricing">
             <span id="modal-product-price" class="modal-price-current">0 ₽</span>
             <span id="modal-product-old-price" class="modal-price-old" style="display:none;">0 ₽</span>
+          </div>
+
+          <div id="modal-colors-group" class="modal-option-group" style="display:none;">
+            <div class="modal-option-title">
+              <span>Цвет: <b id="modal-color-name"></b></span>
+            </div>
+            <div id="modal-colors-list" class="modal-colors-list"></div>
           </div>
 
           <div id="modal-sizes-group" class="modal-option-group">
@@ -429,7 +421,9 @@
 
   <!-- Scripts -->
   <script src="/js/cart.js"></script>
-  <script src="/js/catalog.js?v=20261005a"></script>
+  <script src="/js/delivery.js"></script>
+  <script src="/js/catalog.js?v=20261020a"></script>
   <script src="/js/main.js"></script>
+  <script src="/js/analytics.js" defer></script>
 </body>
 </html>

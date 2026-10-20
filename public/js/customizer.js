@@ -1788,40 +1788,29 @@
         image: previewDataUrl,
         size: state.size,
         is_custom: true,
+        model_id: state.model.id,
+        remove_logo: !!state.removeWatermark,
         custom_details: summary,
         quantity: 1
       });
       if (cartInstance.open) cartInstance.open();
     }
 
-    // Telegram Notification
-    try {
-      const BOT_TOKEN = '8614685280:AAHHeJNgyA9yj7pn9hM-YsOtQ4CgvAlYQTw';
-      const CHAT_ID = '-1004383260528';
-
-      let caption = `💍 <b>НОВЫЙ ЗАКАЗ В КОРЗИНУ (CAD КАСТОМ)</b>\n\n`;
-      caption += `🏷 <b>Изделие:</b> ${state.model.name}\n`;
-      caption += `✨ <b>Металл:</b> ${metalCfg.name}\n`;
-      caption += `📏 <b>Размер:</b> ${state.size} р-р\n`;
-      if (outTexts) caption += `✍️ <b>Гравировка снаружи:</b> ${outTexts}\n`;
-      if (inTexts) caption += `🔒 <b>Гравировка внутри:</b> ${inTexts}\n`;
-      caption += `⚙️ <b>Лого внутри:</b> ${state.removeWatermark ? 'Убрано (+500 ₽)' : 'Сохранено'}\n`;
-      caption += `💰 <b>Сумма:</b> ${finalPrice} ₽`;
-
-      fetch(previewDataUrl)
-        .then((res) => res.blob())
-        .then((blob) => {
-          const formData = new FormData();
-          formData.append('chat_id', CHAT_ID);
-          formData.append('photo', blob, 'custom-ring.png');
-          formData.append('caption', caption);
-          formData.append('parse_mode', 'HTML');
-          fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-            method: 'POST',
-            body: formData
-          });
-        });
-    } catch (e) {}
+    // Notify the shop via our server (bot token stays server-side)
+    fetch('/api/custom/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: previewDataUrl,
+        model: state.model.name,
+        metal: metalCfg.name,
+        size: state.size,
+        outTexts,
+        inTexts,
+        removeWatermark: !!state.removeWatermark,
+        price: finalPrice
+      })
+    }).catch(() => {});
   }
 
   // --- BOOTSTRAP ON LOAD ---

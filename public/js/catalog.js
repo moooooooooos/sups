@@ -135,6 +135,8 @@ let loadedCollectionsList = [];
 
 let currentModalProduct = null;
 let selectedModalSize = null;
+let selectedModalColor = null;
+let modalColorVariants = [];
 let modalQuantity = 1;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -149,7 +151,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   initProductModal();
+
+  // Страница товара (адрес /…/tproduct/…): сервер передаёт id, открываем карточку сразу
+  if (window.SUPS_OPEN_PRODUCT) {
+    productPageOpenedDirectly = true;
+    openProductModal(window.SUPS_OPEN_PRODUCT);
+  }
+
+  // Кнопка «назад» после открытия товара закрывает карточку
+  window.addEventListener('popstate', () => {
+    const backdrop = document.getElementById('product-modal-backdrop');
+    if (backdrop && backdrop.classList.contains('open') && !/\/tproduct\//.test(location.pathname)) {
+      closeProductModal({ fromHistory: true });
+    }
+  });
 });
+
+// Адрес страницы, с которой открыли карточку: при закрытии возвращаемся на него
+let productReturnUrl = null;
+let pageTitleBeforeProduct = null;
+let productPageOpenedDirectly = false;
 
 async function initCatalogPage() {
   // Read query parameters from URL
@@ -781,16 +802,19 @@ function initProductModal() {
 
       const sizes = currentModalProduct.sizes || [];
       if (sizes.length > 0 && !selectedModalSize) {
-        alert('Пожалуйста, выберите размер изделия');
+        showModalSizeHint(true);
         return;
       }
+
+      const pickedColor = modalColorVariants.find(v => v.id === selectedModalColor);
 
       window.cart.addItem({
         id: currentModalProduct.id,
         title: currentModalProduct.title,
         price: currentModalProduct.price,
-        image: (currentModalProduct.images && currentModalProduct.images[0]) || '',
+        image: (pickedColor && pickedColor.images[0]) || (currentModalProduct.images && currentModalProduct.images[0]) || '',
         size: selectedModalSize || '',
+        color: pickedColor ? pickedColor.name : '',
         quantity: modalQuantity
       });
 
@@ -820,6 +844,17 @@ async function openProductModal(productId) {
     currentModalProduct = data.product;
     selectedModalSize = null;
     modalQuantity = 1;
+
+    if (window.supsAnalytics) window.supsAnalytics.track('product_view', { product_id: currentModalProduct.id });
+
+    // Адрес товара в строке браузера — ссылкой на товар можно поделиться
+    if (currentModalProduct.url && location.pathname !== currentModalProduct.url) {
+      if (!productReturnUrl) productReturnUrl = location.pathname + location.search;
+      history.pushState({ product: currentModalProduct.id }, '', currentModalProduct.url);
+    }
+    if (pageTitleBeforeProduct === null) pageTitleBeforeProduct = productPageOpenedDirectly ? '' : document.title;
+    document.title = `${currentModalProduct.title} | САПС`;
+    renderModalRelated(Array.isArray(data.related) ? data.related : []);
 
     // Reset qty
     const qtyInput = document.getElementById('modal-qty-val');
@@ -871,26 +906,12 @@ async function openProductModal(productId) {
       `).join('');
     }
 
-    // Gallery
-    const mainImgEl = document.getElementById('modal-main-img');
-    const thumbsContainer = document.getElementById('modal-thumbs-container');
-    const images = (currentModalProduct.images && currentModalProduct.images.length > 0) ? currentModalProduct.images : ['assets/placeholder.jpg'];
-
-    if (mainImgEl) mainImgEl.src = images[0];
-    if (thumbsContainer) {
-      thumbsContainer.scrollLeft = 0;
-      if (images.length > 1) {
-        thumbsContainer.style.display = 'flex';
-        thumbsContainer.innerHTML = images.map((src, i) => `
-          <div class="modal-thumb ${i === 0 ? 'active' : ''}" onclick="switchModalImage('${src}', this)">
-            <img src="${src}" alt="Фото ${i+1}" loading="lazy">
-          </div>
-        `).join('');
-      } else {
-        thumbsContainer.style.display = 'none';
-        thumbsContainer.innerHTML = '';
-      }
-    }
+    // Colors + Gallery
+    // Если у товара размечены цвета, альбом показывает только фото выбранного цвета.
+    selectedModalColor = null;
+    modalColorVariants = getColorVariants(currentModalProduct);
+    renderModalColors();
+    renderModalGallery(getModalImages());
 
     // Sizes
     const sizesGroup = document.getElementById('modal-sizes-group');
@@ -921,6 +942,140 @@ async function openProductModal(productId) {
   }
 }
 
+/**
+ * Цветовые варианты товара: product.color_variants = [
+ *   { id: 'pink', name: 'Розовое золото', hex: '#E8B4B8', images: [0, 1, 2] }
+ * ]
+ * images: индексы (с нуля) фото из product.images, относящихся к этому цвету.
+ * Варианты без фото отбрасываются: переключать там нечего.
+ */
+function getColorVariants(product) {
+  const all = Array.isArray(product.images) ? product.images : [];
+  const raw = Array.isArray(product.color_variants) ? product.color_variants : [];
+  return raw
+    .map(v => ({
+      id: String(v.id || v.name || ''),
+      name: v.name || v.id || '',
+      hex: v.hex || '#cccccc',
+      images: (Array.isArray(v.images) ? v.images : [])
+        .map(i => all[i])
+        .filter(Boolean)
+    }))
+    .filter(v => v.id && v.images.length > 0);
+}
+
+// Фото для текущего выбора: выбранный цвет, иначе весь альбом товара
+function getModalImages() {
+  const selected = modalColorVariants.find(v => v.id === selectedModalColor);
+  if (selected) return selected.images;
+  const all = currentModalProduct.images || [];
+  return all.length > 0 ? all : ['assets/placeholder.jpg'];
+}
+
+function renderModalColors() {
+  const group = document.getElementById('modal-colors-group');
+  const list = document.getElementById('modal-colors-list');
+  if (!group || !list) return;
+
+  if (modalColorVariants.length === 0) {
+    group.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+
+  // Цвет выбран сразу (первый), чтобы альбом никогда не смешивал цвета
+  selectedModalColor = modalColorVariants[0].id;
+  group.style.display = 'block';
+  list.innerHTML = modalColorVariants.map(v => `
+    <button type="button" class="modal-color-btn ${v.id === selectedModalColor ? 'active' : ''}"
+            data-color="${escapeAttr(v.id)}" title="${escapeAttr(v.name)}" aria-label="${escapeAttr(v.name)}"
+            onclick="selectModalColor('${escapeAttr(v.id)}', this)">
+      <span class="modal-color-dot" style="background:${escapeAttr(v.hex)}"></span>
+      <span class="modal-color-label">${escapeAttr(v.name)}</span>
+    </button>
+  `).join('');
+  updateModalColorName();
+}
+
+function updateModalColorName() {
+  const nameEl = document.getElementById('modal-color-name');
+  const selected = modalColorVariants.find(v => v.id === selectedModalColor);
+  if (nameEl) nameEl.textContent = selected ? selected.name : '';
+}
+
+function renderModalGallery(images) {
+  const mainImgEl = document.getElementById('modal-main-img');
+  const thumbsContainer = document.getElementById('modal-thumbs-container');
+
+  if (mainImgEl) mainImgEl.src = images[0];
+  if (thumbsContainer) {
+    thumbsContainer.scrollLeft = 0;
+    if (images.length > 1) {
+      thumbsContainer.style.display = 'flex';
+      thumbsContainer.innerHTML = images.map((src, i) => `
+        <div class="modal-thumb ${i === 0 ? 'active' : ''}" onclick="switchModalImage('${escapeAttr(src)}', this)">
+          <img src="${escapeAttr(src)}" alt="Фото ${i + 1}" loading="lazy">
+        </div>
+      `).join('');
+    } else {
+      thumbsContainer.style.display = 'none';
+      thumbsContainer.innerHTML = '';
+    }
+  }
+}
+
+function escapeAttr(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
+}
+
+function selectModalColor(colorId, btnEl) {
+  selectedModalColor = colorId;
+  document.querySelectorAll('.modal-color-btn').forEach(b => b.classList.remove('active'));
+  if (btnEl) btnEl.classList.add('active');
+  updateModalColorName();
+  renderModalGallery(getModalImages());
+}
+
+// «Может понравиться»: подборка из админки + автоподбор с сервера; клик открывает другой товар в той же карточке
+function renderModalRelated(related) {
+  const desc = document.getElementById('modal-product-desc');
+  if (!desc) return;
+  let block = document.getElementById('modal-related');
+  if (!block) {
+    block = document.createElement('div');
+    block.id = 'modal-related';
+    block.className = 'modal-related';
+    desc.insertAdjacentElement('afterend', block);
+  }
+  if (!related.length) {
+    block.hidden = true;
+    block.innerHTML = '';
+    return;
+  }
+  block.hidden = false;
+  block.innerHTML = `
+    <h4 class="modal-related-title">Может понравиться</h4>
+    <div class="modal-related-list">
+      ${related.map(p => `
+        <button type="button" class="modal-related-card" data-id="${escapeAttr(p.id)}">
+          <img src="${escapeAttr(p.image || 'assets/placeholder.jpg')}" alt="${escapeAttr(p.title)}" loading="lazy">
+          <span class="modal-related-name">${escapeAttr(p.title)}</span>
+          <span class="modal-related-price">${Math.round(p.price).toLocaleString('ru-RU')} ₽${p.price_old ? ` <s>${Math.round(p.price_old).toLocaleString('ru-RU')} ₽</s>` : ''}</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
+  block.querySelectorAll('.modal-related-card').forEach(card => {
+    card.addEventListener('click', async () => {
+      await openProductModal(card.dataset.id);
+      const scroller = document.querySelector('#product-modal-backdrop .product-modal-container');
+      if (scroller) scroller.scrollTop = 0;
+    });
+  });
+}
+
 function switchModalImage(src, thumbEl) {
   const mainImg = document.getElementById('modal-main-img');
   if (mainImg) mainImg.src = src;
@@ -930,23 +1085,52 @@ function switchModalImage(src, thumbEl) {
   if (thumbEl) thumbEl.classList.add('active');
 }
 
+// Подсказка «выберите размер» прямо под размерами (alert не виден во встроенных браузерах соцсетей)
+function showModalSizeHint(show) {
+  const group = document.getElementById('modal-sizes-group');
+  if (!group) return;
+  let hint = document.getElementById('modal-size-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'modal-size-hint';
+    hint.className = 'modal-size-hint';
+    hint.setAttribute('role', 'alert');
+    group.appendChild(hint);
+  }
+  hint.textContent = show ? 'Выберите размер, чтобы добавить украшение в корзину' : '';
+  group.classList.toggle('needs-size', show);
+  if (show) group.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
 function selectModalSize(size, btnEl) {
   selectedModalSize = size;
+  showModalSizeHint(false);
   const btns = document.querySelectorAll('.modal-size-btn');
   btns.forEach(b => b.classList.remove('active'));
   if (btnEl) btnEl.classList.add('active');
 }
 
-function closeProductModal() {
+function closeProductModal(options = {}) {
   const backdrop = document.getElementById('product-modal-backdrop');
   if (backdrop) {
     backdrop.classList.remove('open');
     document.body.style.overflow = '';
   }
+  // Возвращаем адрес страницы: открыли товар по прямой ссылке — уходим в раздел
+  if (!options.fromHistory && /\/tproduct\//.test(location.pathname)) {
+    const back = productReturnUrl || (productPageOpenedDirectly ? '/' + location.pathname.split('/')[1] : null);
+    if (back) history.replaceState(null, '', back);
+  }
+  if (pageTitleBeforeProduct) document.title = pageTitleBeforeProduct;
+  else if (pageTitleBeforeProduct === '') document.title = 'Каталог украшений | САПС';
+  pageTitleBeforeProduct = null;
+  productReturnUrl = null;
+  productPageOpenedDirectly = false;
 }
 
 // Make functions available globally for inline onclick
 window.switchModalImage = switchModalImage;
+window.selectModalColor = selectModalColor;
 window.selectModalSize = selectModalSize;
 window.openProductModal = openProductModal;
 window.resetFilters = resetFilters;
