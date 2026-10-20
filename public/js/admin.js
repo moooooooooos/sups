@@ -234,7 +234,7 @@ function switchTab(tab) {
   const titleEl = document.getElementById('admin-topbar-title');
   if (titleEl) {
     const titles = {
-      dashboard: 'Сводка и аналитика',
+      dashboard: 'Аналитика магазина',
       products: 'Управление ассортиментом',
       orders: 'Заказы интернет-магазина',
       reviews: 'Модерация отзывов покупателей',
@@ -251,7 +251,7 @@ function switchTab(tab) {
   if (tab === 'customers') loadCustomersTable();
   if (tab === 'promo') loadPromoTable();
   if (tab === 'settings') loadSettings();
-  if (tab === 'dashboard') loadStats();
+  if (tab === 'dashboard') loadAnalytics();
 }
 
 /* ============================================================
@@ -276,6 +276,207 @@ async function loadStats() {
   } catch (err) {
     console.error('Error loading stats:', err);
   }
+}
+
+/* ============================================================
+   Analytics (вкладка «Аналитика»)
+   ============================================================ */
+let analyticsDays = 30;
+let analyticsBound = false;
+
+const AN_DEVICE_NAMES = { mobile: 'Телефон', tablet: 'Планшет', desktop: 'Компьютер', unknown: 'Нет данных' };
+
+function fmtRub(value) {
+  return `${Math.round(value || 0).toLocaleString('ru-RU')} ₽`;
+}
+
+function fmtNum(value) {
+  return Math.round(value || 0).toLocaleString('ru-RU');
+}
+
+function fmtDuration(sec) {
+  sec = Math.round(sec || 0);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m ? `${m} мин ${String(s).padStart(2, '0')} с` : `${s} с`;
+}
+
+function bindAnalyticsControls() {
+  if (analyticsBound) return;
+  analyticsBound = true;
+  document.querySelectorAll('#an-periods button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      analyticsDays = parseInt(btn.dataset.days, 10) || 0;
+      document.querySelectorAll('#an-periods button').forEach(b => b.classList.toggle('active', b === btn));
+      loadAnalytics();
+    });
+  });
+  const scopeEl = document.getElementById('an-scope');
+  if (scopeEl) scopeEl.addEventListener('change', loadAnalytics);
+}
+
+async function loadAnalytics() {
+  bindAnalyticsControls();
+  const scope = (document.getElementById('an-scope') || {}).value || 'paid';
+  try {
+    const res = await fetch(`/api/analytics/report?days=${analyticsDays}&scope=${scope}`, {
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
+    renderAnalytics(data);
+  } catch (err) {
+    const el = document.getElementById('an-kpis-sales');
+    if (el) el.innerHTML = `<div class="an-empty" style="color:var(--admin-red);">Не удалось загрузить аналитику: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function anKpi(label, value, sub = '') {
+  return `
+    <div class="an-kpi">
+      <div class="an-kpi-label">${label}</div>
+      <div class="an-kpi-value">${value}</div>
+      ${sub ? `<div class="an-kpi-sub">${sub}</div>` : ''}
+    </div>
+  `;
+}
+
+// Список «название — значение» с полоской доли от максимума
+function anBarList(rows, opts = {}) {
+  if (!rows || !rows.length) return '<div class="an-empty">Пока нет данных за этот период</div>';
+  const valueOf = opts.value || (r => r.count);
+  const max = Math.max(...rows.map(valueOf), 1);
+  return `<div class="an-list">${rows.map(r => `
+    <div class="an-row">
+      <div class="an-row-top">
+        <span class="an-row-name">${escapeHtml(opts.name ? opts.name(r) : r.name)}</span>
+        <span class="an-row-val">${opts.label ? opts.label(r) : fmtNum(valueOf(r))}</span>
+      </div>
+      <div class="an-bar"><span style="width:${Math.max(2, (valueOf(r) / max) * 100)}%"></span></div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderAnalytics(data) {
+  const s = data.sales;
+  const t = data.traffic;
+  const scopeLabel = data.period.scope === 'all' ? 'оформленных' : 'оплаченных';
+
+  document.getElementById('an-kpis-sales').innerHTML = [
+    anKpi('Выручка', fmtRub(s.revenue), `${scopeLabel} заказов: ${fmtNum(s.orders_counted)}`),
+    anKpi('Заказы', fmtNum(s.orders_created), `оплачено ${fmtNum(s.orders_paid)} · отменено ${fmtNum(s.orders_cancelled)}`),
+    anKpi('Средний чек', fmtRub(s.avg_check)),
+    anKpi('Продано изделий', `${fmtNum(s.items_sold)} шт.`),
+    anKpi('Повторные заказы', fmtNum(s.repeat_orders), `покупателей вернулось: ${fmtNum(s.repeat_customers)}`),
+    anKpi('Конверсия', `${s.conversion}%`, 'заказов на 100 визитов')
+  ].join('');
+
+  document.getElementById('an-kpis-traffic').innerHTML = [
+    anKpi('Посетители', fmtNum(t.visitors), 'уникальные браузеры'),
+    anKpi('Визиты', fmtNum(t.sessions)),
+    anKpi('Просмотры страниц', fmtNum(t.pageviews)),
+    anKpi('Среднее время на сайте', fmtDuration(t.avg_duration_sec)),
+    anKpi('Страниц за визит', String(t.avg_pages).replace('.', ',')),
+    anKpi('Отказы', `${String(t.bounce_rate).replace('.', ',')}%`, '1 страница и меньше 15 с')
+  ].join('');
+
+  renderDailyChart(data.daily);
+
+  // Топ покупок с разбивкой по вариантам
+  const purchasesEl = document.getElementById('an-top-purchases');
+  purchasesEl.innerHTML = data.top_purchases.length
+    ? `<div class="an-list">${data.top_purchases.map((p, i) => {
+        const max = data.top_purchases[0].count || 1;
+        return `
+          <details class="an-purchase">
+            <summary class="an-row">
+              <div class="an-row-top">
+                <span class="an-row-name">${i + 1}. ${escapeHtml(p.name)}</span>
+                <span class="an-row-val">${fmtNum(p.count)} шт. · ${fmtRub(p.revenue)}</span>
+              </div>
+              <div class="an-bar"><span style="width:${Math.max(2, (p.count / max) * 100)}%"></span></div>
+            </summary>
+            <table class="an-variants">
+              <tr><th>Вариант</th><th>Шт.</th><th>Сумма</th></tr>
+              ${p.variants.map(v => `<tr><td>${escapeHtml(v.name)}</td><td>${fmtNum(v.count)}</td><td>${fmtRub(v.revenue)}</td></tr>`).join('')}
+              <tr class="an-variants-total"><td>Заказов с товаром</td><td colspan="2">${fmtNum(p.orders)}</td></tr>
+            </table>
+          </details>
+        `;
+      }).join('')}</div>`
+    : '<div class="an-empty">Пока нет продаж за этот период</div>';
+
+  document.getElementById('an-top-viewed').innerHTML = anBarList(data.top_viewed, {
+    label: r => `${fmtNum(r.count)} просм. · ${fmtNum(r.sessions)} виз.`
+  });
+
+  document.getElementById('an-top-cities').innerHTML = anBarList(data.top_cities, {
+    label: r => `${fmtNum(r.count)} зак. · ${fmtRub(r.revenue)}`
+  });
+
+  document.getElementById('an-devices').innerHTML = `
+    <div class="an-subtitle">Визиты</div>
+    ${anBarList(data.devices.sessions, { name: r => AN_DEVICE_NAMES[r.name] || r.name })}
+    <div class="an-subtitle">Заказы</div>
+    ${anBarList(data.devices.orders, {
+      name: r => AN_DEVICE_NAMES[r.name] || r.name,
+      label: r => `${fmtNum(r.count)} зак. · ${fmtRub(r.revenue)}`
+    })}
+  `;
+
+  document.getElementById('an-sources').innerHTML = anBarList(data.sources, {
+    name: r => (r.name === 'direct' ? 'Прямые заходы' : r.name),
+    label: r => `${fmtNum(r.count)} виз.`
+  });
+
+  document.getElementById('an-top-pages').innerHTML = anBarList(data.top_pages, {
+    label: r => `${fmtNum(r.count)} просм.`
+  });
+}
+
+// Столбики выручки по дням и линия визитов (SVG без библиотек)
+function renderDailyChart(daily) {
+  const el = document.getElementById('an-daily-chart');
+  if (!el) return;
+  if (!daily || !daily.length) {
+    el.innerHTML = '<div class="an-empty">Пока нет данных за этот период</div>';
+    return;
+  }
+  const W = 760, H = 220, padL = 8, padR = 8, padT = 12, padB = 26;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const step = innerW / daily.length;
+  const maxRev = Math.max(...daily.map(d => d.revenue), 1);
+  const maxSes = Math.max(...daily.map(d => d.sessions), 1);
+  const barW = Math.max(2, Math.min(28, step * 0.6));
+  const labelEvery = Math.ceil(daily.length / 10);
+
+  const bars = daily.map((d, i) => {
+    const h = (d.revenue / maxRev) * innerH;
+    const x = padL + i * step + (step - barW) / 2;
+    return `<rect class="an-chart-bar" x="${x.toFixed(1)}" y="${(padT + innerH - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2">
+      <title>${d.day}: ${fmtRub(d.revenue)}, заказов ${d.orders}, визитов ${d.sessions}</title></rect>`;
+  }).join('');
+
+  const points = daily.map((d, i) => {
+    const x = padL + i * step + step / 2;
+    const y = padT + innerH - (d.sessions / maxSes) * innerH;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  const labels = daily.map((d, i) => (i % labelEvery === 0
+    ? `<text class="an-chart-label" x="${(padL + i * step + step / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle">${d.day.slice(8, 10)}.${d.day.slice(5, 7)}</text>`
+    : '')).join('');
+
+  el.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" class="an-chart-svg" role="img" aria-label="Выручка и визиты по дням">
+      <line class="an-chart-axis" x1="${padL}" x2="${W - padR}" y1="${padT + innerH}" y2="${padT + innerH}"></line>
+      ${bars}
+      <polyline class="an-chart-line" points="${points}"></polyline>
+      ${labels}
+    </svg>
+    <div class="an-chart-max">макс. выручка за день: ${fmtRub(maxRev)} · макс. визитов: ${fmtNum(maxSes)}</div>
+  `;
 }
 
 /* ============================================================

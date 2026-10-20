@@ -138,6 +138,34 @@ try { db.exec("ALTER TABLE orders ADD COLUMN pd_consent_at TEXT;"); } catch (e) 
 try { db.exec("ALTER TABLE customers ADD COLUMN pd_consent_at TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE reviews ADD COLUMN pd_consent_at TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE reviews ADD COLUMN publish_consent_at TEXT;"); } catch (e) {}
+// Устройство, с которого оформлен заказ (mobile / tablet / desktop)
+try { db.exec("ALTER TABLE orders ADD COLUMN device TEXT;"); } catch (e) {}
+
+// Собственная анонимная веб-аналитика: визиты и события (без IP и без привязки к покупателю)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS analytics_sessions (
+    id TEXT PRIMARY KEY,
+    visitor_id TEXT NOT NULL,
+    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+    pageviews INTEGER NOT NULL DEFAULT 0,
+    device TEXT,
+    source TEXT,
+    landing_path TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS analytics_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    path TEXT,
+    product_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_an_sessions_started ON analytics_sessions(started_at);
+  CREATE INDEX IF NOT EXISTS idx_an_events_created ON analytics_events(created_at, type);
+`);
 
 // Safe indexes
 db.exec(`

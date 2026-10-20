@@ -749,3 +749,247 @@ body.admin-body {
     padding: 16px;
   }
 }
+
+/* ============================================================
+   Analytics tab
+   ============================================================ */
+.an-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.an-periods {
+  display: inline-flex;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.an-periods button {
+  border: none;
+  background: transparent;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #555;
+}
+
+.an-periods button.active {
+  background: #000;
+  color: #fff;
+}
+
+.an-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.an-section-title {
+  margin: 22px 0 12px;
+  font-size: 1rem;
+}
+
+.an-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.an-kpi {
+  background: #fff;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.an-kpi-label {
+  font-size: 0.78rem;
+  color: #777;
+  margin-bottom: 6px;
+}
+
+.an-kpi-value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.an-kpi-sub {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 4px;
+}
+
+.an-card {
+  margin-top: 16px;
+}
+
+.an-card h4 {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+}
+
+.an-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.an-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.an-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-left: 8px;
+}
+
+.an-dot-rev { background: #111; }
+.an-dot-ses { background: #f59e0b; border-radius: 50%; }
+
+.an-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.an-chart-bar { fill: #111; }
+.an-chart-line { fill: none; stroke: #f59e0b; stroke-width: 2; }
+.an-chart-axis { stroke: var(--admin-border); }
+.an-chart-label { font-size: 11px; fill: #888; }
+
+.an-chart-max {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 4px;
+}
+
+.an-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 0 16px;
+}
+
+.an-hint,
+.an-subtitle {
+  font-size: 0.75rem;
+  color: #888;
+  margin: -4px 0 10px;
+}
+
+.an-subtitle {
+  margin: 12px 0 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.an-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.an-row-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.an-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.an-row-val {
+  flex-shrink: 0;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+}
+
+.an-bar {
+  height: 6px;
+  background: #f1f3f7;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.an-bar span {
+  display: block;
+  height: 100%;
+  background: #111;
+  border-radius: 3px;
+}
+
+.an-purchase summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.an-purchase summary::-webkit-details-marker {
+  display: none;
+}
+
+.an-purchase[open] summary .an-row-name {
+  font-weight: 700;
+}
+
+.an-variants {
+  width: 100%;
+  margin: 8px 0 4px;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.an-variants th,
+.an-variants td {
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.an-variants th {
+  color: #888;
+  font-weight: 600;
+}
+
+.an-variants-total td {
+  color: #666;
+  border-bottom: none;
+}
+
+.an-empty {
+  font-size: 0.85rem;
+  color: #999;
+  padding: 8px 0;
+}
+
+@media (max-width: 600px) {
+  .an-grid { grid-template-columns: 1fr; }
+  .an-kpi-value { font-size: 1.2rem; }
+}

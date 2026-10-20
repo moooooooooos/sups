@@ -26,7 +26,8 @@ router.post('/', optionalCustomer, async (req, res) => {
       delivery_price = 0,
       use_bonuses = false,
       offer_accepted = false,
-      pd_consent = false
+      pd_consent = false,
+      device = null
     } = req.body;
 
     if (offer_accepted !== true || pd_consent !== true) {
@@ -90,11 +91,11 @@ router.post('/', optionalCustomer, async (req, res) => {
       INSERT INTO orders (
         order_number, customer_id, customer_name, customer_phone, customer_email,
         delivery_method, delivery_address, comment, items,
-        subtotal, delivery_price, bonus_used, discount_amount, total_price, status, pd_consent_at
+        subtotal, delivery_price, bonus_used, discount_amount, total_price, status, pd_consent_at, device
       ) VALUES (
         @order_number, @customer_id, @customer_name, @customer_phone, @customer_email,
         @delivery_method, @delivery_address, @comment, @items,
-        @subtotal, @delivery_price, @bonus_used, @discount_amount, @total_price, 'new', datetime('now')
+        @subtotal, @delivery_price, @bonus_used, @discount_amount, @total_price, 'new', datetime('now'), @device
       )
     `);
 
@@ -112,7 +113,8 @@ router.post('/', optionalCustomer, async (req, res) => {
       delivery_price: deliv,
       bonus_used: bonusUsed,
       discount_amount: discountAmount,
-      total_price
+      total_price,
+      device: ['mobile', 'tablet', 'desktop'].includes(device) ? device : null
     });
 
     // Update customer stats & bonus points

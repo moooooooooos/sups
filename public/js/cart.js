@@ -349,7 +349,8 @@ class SupsCart {
       delivery_price: deliveryPrice,
       promo_code: this.appliedPromo ? this.appliedPromo.code : null,
       offer_accepted: formData.offer_accepted === true,
-      pd_consent: formData.pd_consent === true
+      pd_consent: formData.pd_consent === true,
+      device: window.supsAnalytics ? window.supsAnalytics.device : null
     };
 
     const headers = { 'Content-Type': 'application/json' };

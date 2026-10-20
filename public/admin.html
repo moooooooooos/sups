@@ -83,7 +83,7 @@
         <li class="admin-nav-item" data-tab="dashboard">
           <a href="#">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-            <span>Сводка</span>
+            <span>Аналитика</span>
           </a>
         </li>
         <li class="admin-nav-item" data-tab="settings">
@@ -235,6 +235,7 @@
                   <!-- Loaded dynamically -->
                 </tbody>
               </table>
+            </div>
           </div>
         </div>
 
@@ -265,6 +266,10 @@
                   <!-- Loaded dynamically -->
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+
         <!-- TAB: Promo Codes View -->
         <div id="tab-view-promo" class="admin-tab-view" style="display:none;">
           <div class="admin-card">
@@ -301,45 +306,63 @@
 
         <!-- TAB 3: Dashboard / Stats View -->
         <div id="tab-view-dashboard" class="admin-tab-view" style="display:none;">
-          <div class="admin-stats-grid">
-            <div class="stat-card">
-              <div class="stat-icon-wrap stat-icon-products">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-label">Всего товаров</span>
-                <span id="stat-total-products" class="stat-value">0</span>
-              </div>
+          <div class="an-toolbar">
+            <div class="an-periods" id="an-periods">
+              <button type="button" data-days="1">Сегодня</button>
+              <button type="button" data-days="7">7 дней</button>
+              <button type="button" data-days="30" class="active">30 дней</button>
+              <button type="button" data-days="90">90 дней</button>
+              <button type="button" data-days="0">Всё время</button>
             </div>
+            <label class="an-scope">
+              Продажи:
+              <select id="an-scope" class="filter-select">
+                <option value="paid">только оплаченные</option>
+                <option value="all">все оформленные</option>
+              </select>
+            </label>
+          </div>
 
-            <div class="stat-card">
-              <div class="stat-icon-wrap stat-icon-stock">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-label">В наличии</span>
-                <span id="stat-stock-products" class="stat-value">0</span>
-              </div>
+          <h3 class="an-section-title">Продажи</h3>
+          <div class="an-kpis" id="an-kpis-sales"></div>
+
+          <h3 class="an-section-title">Посещаемость</h3>
+          <div class="an-kpis" id="an-kpis-traffic"></div>
+
+          <div class="admin-card an-card">
+            <div class="an-card-head">
+              <h4>По дням</h4>
+              <div class="an-legend"><span class="an-dot an-dot-rev"></span>Выручка <span class="an-dot an-dot-ses"></span>Визиты</div>
             </div>
+            <div id="an-daily-chart" class="an-chart"></div>
+          </div>
 
-            <div class="stat-card">
-              <div class="stat-icon-wrap stat-icon-orders">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path></svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-label">Новых заказов</span>
-                <span id="stat-total-orders" class="stat-value">0</span>
-              </div>
+          <div class="an-grid">
+            <div class="admin-card an-card">
+              <h4>Топ покупок</h4>
+              <div class="an-hint">Нажмите на товар, чтобы увидеть разбивку по размерам и цветам</div>
+              <div id="an-top-purchases"></div>
             </div>
-
-            <div class="stat-card">
-              <div class="stat-icon-wrap stat-icon-revenue">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-              </div>
-              <div class="stat-info">
-                <span class="stat-label">Общая выручка</span>
-                <span id="stat-total-rev" class="stat-value">0 ₽</span>
-              </div>
+            <div class="admin-card an-card">
+              <h4>Топ просмотров товаров</h4>
+              <div id="an-top-viewed"></div>
+            </div>
+            <div class="admin-card an-card">
+              <h4>Топ городов</h4>
+              <div class="an-hint">По адресу доставки в заказах</div>
+              <div id="an-top-cities"></div>
+            </div>
+            <div class="admin-card an-card">
+              <h4>Устройства</h4>
+              <div id="an-devices"></div>
+            </div>
+            <div class="admin-card an-card">
+              <h4>Источники трафика</h4>
+              <div id="an-sources"></div>
+            </div>
+            <div class="admin-card an-card">
+              <h4>Популярные страницы</h4>
+              <div id="an-top-pages"></div>
             </div>
           </div>
         </div>
@@ -356,7 +379,7 @@
 
               <div class="form-group">
                 <label class="form-label">Telegram Chat ID</label>
-                <input type="text" id="setting-tg-chat" class="form-input" placeholder="-1004383260528">
+                <input type="text" id="setting-tg-chat" class="form-input" placeholder="-100XXXXXXXXXX">
               </div>
 
               <div class="form-group">

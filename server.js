@@ -25,6 +25,7 @@ const { router: customersRouter } = require('./src/routes/customers');
 const promoRouter = require('./src/routes/promo');
 const adminRouter = require('./src/routes/admin');
 const paymentsRouter = require('./src/routes/payments');
+const analyticsRouter = require('./src/routes/analytics');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -55,6 +56,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/customers', customersRouter);
 app.use('/api/promo', promoRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/analytics', analyticsRouter);
 
 // Clean URL routing for HTML pages
 const cleanPages = [

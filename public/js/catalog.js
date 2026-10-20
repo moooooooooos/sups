@@ -826,6 +826,8 @@ async function openProductModal(productId) {
     selectedModalSize = null;
     modalQuantity = 1;
 
+    if (window.supsAnalytics) window.supsAnalytics.track('product_view', { product_id: currentModalProduct.id });
+
     // Reset qty
     const qtyInput = document.getElementById('modal-qty-val');
     if (qtyInput) qtyInput.value = 1;
