@@ -149,6 +149,9 @@ server {
 EOF
   ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/
   rm -f /etc/nginx/sites-enabled/default
+elif [ -n "$DOMAIN_NAME" ] && ! grep -q "server_name.*$DOMAIN_NAME" "$NGINX_CONF"; then
+  # Конфиг от установки без домена (server_name _): дописываем домен, иначе certbot не найдёт, куда ставить SSL
+  sed -i "s|^\([[:space:]]*server_name\) _;|\1 $DOMAIN_NAME www.$DOMAIN_NAME;|" "$NGINX_CONF"
 fi
 nginx -t
 systemctl reload nginx || systemctl restart nginx
