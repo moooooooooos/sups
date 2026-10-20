@@ -10,15 +10,22 @@ function getSetting(key, defaultValue = '') {
   }
 }
 
-async function sendTelegramMessage(text) {
+function getTelegramConfig() {
   const token = getSetting('telegram_bot_token', process.env.TELEGRAM_BOT_TOKEN);
   const chatId = getSetting('telegram_chat_id', process.env.TELEGRAM_CHAT_ID);
   const enabled = getSetting('telegram_notifications_enabled', '1');
 
   if (!enabled || enabled === '0' || !token || !chatId) {
     console.log('[Telegram] Notifications disabled or token/chatId not configured');
-    return false;
+    return null;
   }
+  return { token, chatId };
+}
+
+async function sendTelegramMessage(text) {
+  const config = getTelegramConfig();
+  if (!config) return false;
+  const { token, chatId } = config;
 
   const payload = JSON.stringify({
     chat_id: chatId,
@@ -69,6 +76,36 @@ async function sendTelegramMessage(text) {
   });
 }
 
+// Sends a photo (Buffer) with an HTML caption to the configured chat
+async function sendTelegramPhoto(photoBuffer, caption, filename = 'photo.png') {
+  const config = getTelegramConfig();
+  if (!config) return false;
+  const { token, chatId } = config;
+
+  const form = new FormData();
+  form.append('chat_id', chatId);
+  form.append('photo', new Blob([photoBuffer], { type: 'image/png' }), filename);
+  form.append('caption', caption);
+  form.append('parse_mode', 'HTML');
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+      method: 'POST',
+      body: form,
+      signal: AbortSignal.timeout(15000)
+    });
+    if (res.ok) {
+      console.log('[Telegram] Photo sent successfully');
+      return true;
+    }
+    console.warn('[Telegram] API error:', res.status, await res.text());
+    return false;
+  } catch (err) {
+    console.error('[Telegram] Photo request failed:', err.message);
+    return false;
+  }
+}
+
 function formatOrderNotification(order) {
   const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || '[]');
 
@@ -100,5 +137,6 @@ function formatOrderNotification(order) {
 
 module.exports = {
   sendTelegramMessage,
+  sendTelegramPhoto,
   formatOrderNotification
 };
