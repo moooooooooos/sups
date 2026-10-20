@@ -133,6 +133,11 @@ try { db.exec("ALTER TABLE reviews ADD COLUMN customer_id INTEGER;"); } catch (e
 try { db.exec("ALTER TABLE reviews ADD COLUMN order_id INTEGER;"); } catch (e) {}
 try { db.exec("ALTER TABLE customers ADD COLUMN birthdate TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE products ADD COLUMN categories TEXT DEFAULT '[]';"); } catch (e) {}
+// Когда получено согласие на обработку ПД (и на распространение — для отзывов), 152-ФЗ
+try { db.exec("ALTER TABLE orders ADD COLUMN pd_consent_at TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE customers ADD COLUMN pd_consent_at TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE reviews ADD COLUMN pd_consent_at TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE reviews ADD COLUMN publish_consent_at TEXT;"); } catch (e) {}
 
 // Safe indexes
 db.exec(`

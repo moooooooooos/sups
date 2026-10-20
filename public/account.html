@@ -162,6 +162,10 @@
           <label class="form-label">Пароль *</label>
           <input type="password" id="reg-password" class="form-input" placeholder="Минимум 6 символов" required minlength="6">
         </div>
+        <div class="consent-checks">
+              <label class="consent-check"><input type="checkbox" id="reg-consent-agreement" required><span>Я принимаю условия <a href="/agreement" target="_blank">пользовательского соглашения</a></span></label>
+              <label class="consent-check"><input type="checkbox" id="reg-consent-pd" required><span>Даю <a href="/consent" target="_blank">согласие на обработку персональных данных</a> в соответствии с <a href="/privacy" target="_blank">политикой</a></span></label>
+            </div>
         <div id="reg-error-msg" style="color:red; font-size:0.85rem; margin-bottom:12px;"></div>
         <button type="submit" class="btn btn-primary" style="width:100%;">Зарегистрироваться</button>
       </form>
@@ -234,10 +238,21 @@
     </div>
   </main>
 
-  <footer class="site-footer">
-    <div class="container" style="text-align:center; color:#888;">
-      © 2026 САПС. Все права защищены.
+  <footer class="site-footer site-footer--legal">
+    <div class="container legal-strip">
+      <nav class="legal-strip-links" aria-label="Правовая информация">
+        <a href="/offer">Публичная оферта</a>
+        <a href="/privacy">Политика обработки персональных данных</a>
+        <a href="/consent">Согласие на обработку персональных данных</a>
+        <a href="/agreement">Пользовательское соглашение</a>
+        <a href="/buyers?topic=return">Возврат товара</a>
+      </nav>
+      <div class="legal-strip-requisites">
+        ИП Богданов Роман Николаевич · ОГРНИП 324861700088491 · ИНН 450126517632 · г. Екатеринбург<br>
+        <a href="tel:+79526659299">+7 (952) 665-92-99</a> · <a href="mailto:sups.official.spb@gmail.com">sups.official.spb@gmail.com</a>
+      </div>
     </div>
+    <div class="container legal-strip-copy">© 2026 САПС (sups-official.ru). Все права защищены.</div>
   </footer>
 
   <script>
@@ -314,7 +329,11 @@
           const res = await fetch('/api/customers/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, phone, birthdate, password })
+            body: JSON.stringify({
+              name, email, phone, birthdate, password,
+              agreement_accepted: document.getElementById('reg-consent-agreement').checked,
+              pd_consent: document.getElementById('reg-consent-pd').checked
+            })
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Ошибка регистрации');

@@ -24,8 +24,14 @@ router.post('/', optionalCustomer, async (req, res) => {
       comment,
       items,
       delivery_price = 0,
-      use_bonuses = false
+      use_bonuses = false,
+      offer_accepted = false,
+      pd_consent = false
     } = req.body;
+
+    if (offer_accepted !== true || pd_consent !== true) {
+      return res.status(400).json({ error: 'Подтвердите согласие с офертой и на обработку персональных данных' });
+    }
 
     if (!customer_name || !customer_phone) {
       return res.status(400).json({ error: 'Пожалуйста, укажите имя и номер телефона' });
@@ -84,11 +90,11 @@ router.post('/', optionalCustomer, async (req, res) => {
       INSERT INTO orders (
         order_number, customer_id, customer_name, customer_phone, customer_email,
         delivery_method, delivery_address, comment, items,
-        subtotal, delivery_price, bonus_used, discount_amount, total_price, status
+        subtotal, delivery_price, bonus_used, discount_amount, total_price, status, pd_consent_at
       ) VALUES (
         @order_number, @customer_id, @customer_name, @customer_phone, @customer_email,
         @delivery_method, @delivery_address, @comment, @items,
-        @subtotal, @delivery_price, @bonus_used, @discount_amount, @total_price, 'new'
+        @subtotal, @delivery_price, @bonus_used, @discount_amount, @total_price, 'new', datetime('now')
       )
     `);
 

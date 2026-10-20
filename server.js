@@ -72,6 +72,7 @@ const cleanPages = [
   'privacy',
   'agreement',
   'offer',
+  'consent',
   'leave-review',
   'account',
   'admin',

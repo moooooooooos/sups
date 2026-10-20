@@ -173,9 +173,10 @@
             <li><a href="/#reviews">Отзывы</a></li>
             <li><a href="/#addresses">Адреса магазинов</a></li>
             <li><a href="/leave-review">Написать отзыв</a></li>
-            <li><a href="/privacy">Политика конфиденциальности</a></li>
+            <li><a href="/privacy">Политика обработки ПД</a></li>
             <li><a href="/agreement">Пользовательское соглашение</a></li>
-            <li><a href="/offer">Оферта</a></li>
+            <li><a href="/offer">Публичная оферта</a></li>
+            <li><a href="/consent">Согласие на обработку ПД</a></li>
           </ul>
         </div>
 
@@ -351,6 +352,10 @@
               </div>
             </div>
 
+            <div class="consent-checks">
+              <label class="consent-check"><input type="checkbox" id="order-consent-offer" required><span>Я ознакомлен(а) с <a href="/offer" target="_blank">публичной офертой</a> и принимаю её условия</span></label>
+              <label class="consent-check"><input type="checkbox" id="order-consent-pd" required><span>Даю <a href="/consent" target="_blank">согласие на обработку персональных данных</a> в соответствии с <a href="/privacy" target="_blank">политикой</a></span></label>
+            </div>
             <button type="submit" id="btn-submit-order" class="btn btn-primary" style="width:100%; padding:16px; margin-top:14px;">
               Подтвердить заказ
             </button>

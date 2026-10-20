@@ -72,7 +72,11 @@ function optionalCustomer(req, res, next) {
 // POST /api/customers/register
 router.post('/register', (req, res) => {
   try {
-    const { name, email, phone, birthdate, password } = req.body;
+    const { name, email, phone, birthdate, password, agreement_accepted = false, pd_consent = false } = req.body;
+
+    if (agreement_accepted !== true || pd_consent !== true) {
+      return res.status(400).json({ error: 'Подтвердите согласие с пользовательским соглашением и на обработку персональных данных' });
+    }
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'Пожалуйста, заполните имя, email и пароль' });
@@ -95,8 +99,8 @@ router.post('/register', (req, res) => {
 
     // Give 100 welcome bonus points
     const stmt = db.prepare(`
-      INSERT INTO customers (user_code, name, email, phone, birthdate, password_hash, bonus_points, personal_discount, total_spent)
-      VALUES (?, ?, ?, ?, ?, ?, 100, 0, 0)
+      INSERT INTO customers (user_code, name, email, phone, birthdate, password_hash, bonus_points, personal_discount, total_spent, pd_consent_at)
+      VALUES (?, ?, ?, ?, ?, ?, 100, 0, 0, datetime('now'))
     `);
 
     const result = stmt.run(userCode, name.trim(), cleanEmail, phone ? phone.trim() : '', birthdate ? birthdate.trim() : '', hash);

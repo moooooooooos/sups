@@ -272,7 +272,9 @@ function initCheckoutForm() {
         phone: document.getElementById('order-phone').value,
         email: document.getElementById('order-email').value,
         address: document.getElementById('order-address').value,
-        comment: document.getElementById('order-comment').value
+        comment: document.getElementById('order-comment').value,
+        offer_accepted: !!document.getElementById('order-consent-offer')?.checked,
+        pd_consent: !!document.getElementById('order-consent-pd')?.checked
       };
       window.cart.submitOrder(formData);
     });

@@ -172,6 +172,10 @@
 
           <div id="review-customer-photo-previews" class="image-previews-list" style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;"></div>
         </div>
+        <div class="consent-checks">
+              <label class="consent-check"><input type="checkbox" id="review-consent-pd" required><span>Даю <a href="/consent" target="_blank">согласие на обработку персональных данных</a> в соответствии с <a href="/privacy" target="_blank">политикой</a></span></label>
+              <label class="consent-check"><input type="checkbox" id="review-consent-publish" required><span>Даю согласие на <a href="/consent" target="_blank">распространение</a> моего имени, города, текста отзыва и фотографий на сайте sups-official.ru</span></label>
+            </div>
 
         <button type="submit" id="btn-submit-review" class="btn btn-primary" style="width:100%; padding:14px; font-size:1rem;">
           Опубликовать отзыв
@@ -189,10 +193,21 @@
     </div>
   </main>
 
-  <footer class="site-footer">
-    <div class="container" style="text-align:center; color:#888;">
-      © 2026 САПС. Все права защищены.
+  <footer class="site-footer site-footer--legal">
+    <div class="container legal-strip">
+      <nav class="legal-strip-links" aria-label="Правовая информация">
+        <a href="/offer">Публичная оферта</a>
+        <a href="/privacy">Политика обработки персональных данных</a>
+        <a href="/consent">Согласие на обработку персональных данных</a>
+        <a href="/agreement">Пользовательское соглашение</a>
+        <a href="/buyers?topic=return">Возврат товара</a>
+      </nav>
+      <div class="legal-strip-requisites">
+        ИП Богданов Роман Николаевич · ОГРНИП 324861700088491 · ИНН 450126517632 · г. Екатеринбург<br>
+        <a href="tel:+79526659299">+7 (952) 665-92-99</a> · <a href="mailto:sups.official.spb@gmail.com">sups.official.spb@gmail.com</a>
+      </div>
     </div>
+    <div class="container legal-strip-copy">© 2026 САПС (sups-official.ru). Все права защищены.</div>
   </footer>
 
   <script>
@@ -351,7 +366,9 @@
               city,
               rating: currentRating,
               text,
-              photos: attachedReviewPhotos
+              photos: attachedReviewPhotos,
+              pd_consent: document.getElementById('review-consent-pd').checked,
+              publish_consent: document.getElementById('review-consent-publish').checked
             })
           });
 

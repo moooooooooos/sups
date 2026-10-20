@@ -347,7 +347,9 @@ class SupsCart {
       comment: formData.comment,
       items: this.items,
       delivery_price: deliveryPrice,
-      promo_code: this.appliedPromo ? this.appliedPromo.code : null
+      promo_code: this.appliedPromo ? this.appliedPromo.code : null,
+      offer_accepted: formData.offer_accepted === true,
+      pd_consent: formData.pd_consent === true
     };
 
     const headers = { 'Content-Type': 'application/json' };
@@ -363,19 +365,16 @@ class SupsCart {
         submitBtn.textContent = 'Оформляем...';
       }
 
-      let data;
-    try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
+      const res = await fetch('/api/orders', {
+        method: 'POST',
         headers,
         body: JSON.stringify(payload)
       });
-      if (res.ok) data = await res.json();
-    } catch(e) {}
-
-    if (!data || !data.order_number) {
-      data = { order_number: "SUPS-" + Math.floor(100000 + Math.random() * 900000) };
-    }
+      const data = await res.json().catch(() => ({}));
+      // Без подтверждения сервера заказ не считается оформленным
+      if (!res.ok || !data.order_number) {
+        throw new Error(data.error || 'сервер не принял заказ, попробуйте ещё раз');
+      }
 
       // Success
       this.clear();
