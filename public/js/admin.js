@@ -7,7 +7,19 @@ let currentTab = 'products';
 let currentProducts = [];
 let editingProductId = null;
 let uploadedImages = [];
+// Цвет каждого фото, параллельно uploadedImages: id варианта или '' (без цвета)
+let uploadedImageColors = [];
+// Цветовые варианты товара: { id, name, hex }. Фото хранятся в uploadedImageColors,
+// при сохранении превращаются в индексы color_variants[].images
+let currentColors = [];
 let currentSizes = [];
+
+const COLOR_PRESETS = [
+  { name: 'Сталь', hex: '#c0c4c8' },
+  { name: 'Чёрный', hex: '#1e1e1e' },
+  { name: 'Золото', hex: '#d4af37' },
+  { name: 'Розовое золото', hex: '#e8b4b8' }
+];
 let reviewUploadedPhotos = [];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -154,6 +166,43 @@ function bindNavigation() {
         e.preventDefault();
         addSizeBtn.click();
       }
+    });
+  }
+
+  // Colours Manager
+  const addColorBtn = document.getElementById('btn-add-color');
+  const colorNameInput = document.getElementById('admin-input-new-color-name');
+  const colorHexInput = document.getElementById('admin-input-new-color-hex');
+  if (addColorBtn && colorNameInput && colorHexInput) {
+    addColorBtn.addEventListener('click', () => {
+      if (addColorVariant(colorNameInput.value, colorHexInput.value)) {
+        colorNameInput.value = '';
+      }
+    });
+    colorNameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addColorBtn.click();
+      }
+    });
+  }
+
+  const presetsEl = document.getElementById('admin-color-presets');
+  if (presetsEl) {
+    presetsEl.innerHTML = COLOR_PRESETS.map((p, i) => `
+      <button type="button" class="color-preset-btn" onclick="addColorPreset(${i})">
+        <span class="color-dot" style="background:${p.hex}"></span>${p.name}
+      </button>
+    `).join('');
+  }
+
+  const colorPhotoInput = document.getElementById('admin-color-photo-input');
+  if (colorPhotoInput) {
+    colorPhotoInput.addEventListener('change', async () => {
+      if (colorPhotoInput.files.length) {
+        await uploadFiles(colorPhotoInput.files, colorPhotoInput.dataset.colorId || '');
+      }
+      colorPhotoInput.value = '';
     });
   }
 
@@ -404,6 +453,7 @@ function addPhotoUrlFromInput() {
   const val = urlInput.value.trim();
   if (val) {
     uploadedImages.push(val);
+    uploadedImageColors.push('');
     renderImagePreviews();
     urlInput.value = '';
   }
@@ -412,6 +462,8 @@ function addPhotoUrlFromInput() {
 function openAddProductModal() {
   editingProductId = null;
   uploadedImages = [];
+  uploadedImageColors = [];
+  currentColors = [];
   currentSizes = ['16', '17', '18', '19', '20', '21'];
 
   document.getElementById('admin-modal-title').textContent = 'Добавить новый товар';
@@ -440,6 +492,20 @@ function editProduct(productId) {
   uploadedImages = Array.isArray(prod.images) ? [...prod.images] : [];
   currentSizes = Array.isArray(prod.sizes) ? [...prod.sizes] : [];
 
+  // color_variants[].images — индексы фото; раскладываем их по фото
+  uploadedImageColors = uploadedImages.map(() => '');
+  currentColors = [];
+  (Array.isArray(prod.color_variants) ? prod.color_variants : []).forEach(v => {
+    const id = String(v.id || v.name || '').trim();
+    if (!id || currentColors.some(c => c.id === id)) return;
+    currentColors.push({ id, name: v.name || id, hex: v.hex || '#cccccc' });
+    (Array.isArray(v.images) ? v.images : []).forEach(i => {
+      if (i >= 0 && i < uploadedImageColors.length && !uploadedImageColors[i]) {
+        uploadedImageColors[i] = id;
+      }
+    });
+  });
+
   document.getElementById('admin-modal-title').textContent = `Редактирование: ${prod.title}`;
   document.getElementById('prod-form-title').value = prod.title || '';
   document.getElementById('prod-form-sku').value = prod.sku || '';
@@ -462,7 +528,7 @@ function closeProductModal() {
   document.getElementById('admin-product-modal-backdrop').classList.remove('open');
 }
 
-async function uploadFiles(fileList) {
+async function uploadFiles(fileList, colorId = '') {
   const formData = new FormData();
   for (let i = 0; i < fileList.length; i++) {
     formData.append('photos', fileList[i]);
@@ -479,6 +545,7 @@ async function uploadFiles(fileList) {
 
     if (data.urls) {
       uploadedImages.push(...data.urls);
+      uploadedImageColors.push(...data.urls.map(() => colorId));
       renderImagePreviews();
     }
   } catch (err) {
@@ -486,21 +553,165 @@ async function uploadFiles(fileList) {
   }
 }
 
+// Общий альбом товара + блок цветов (они зависят друг от друга, поэтому рисуются вместе)
 function renderImagePreviews() {
   const container = document.getElementById('admin-image-previews');
-  if (!container) return;
-
-  container.innerHTML = uploadedImages.map((url, i) => `
-    <div class="image-preview-item">
-      <img src="${url}">
-      <button type="button" class="image-preview-remove" onclick="removeUploadedImage(${i})">×</button>
-    </div>
-  `).join('');
+  if (container) {
+    const last = uploadedImages.length - 1;
+    container.innerHTML = uploadedImages.map((url, i) => {
+      const colorId = uploadedImageColors[i] || '';
+      const color = currentColors.find(c => c.id === colorId);
+      return `
+        <div class="image-preview-card">
+          <div class="image-preview-item" style="${color ? `border-color:${escapeHtml(color.hex)}` : ''}">
+            <img src="${escapeHtml(url)}">
+            <button type="button" class="image-preview-remove" onclick="removeUploadedImage(${i})" title="Удалить фото">×</button>
+            ${i === 0 ? '<span class="image-preview-main">Главное</span>' : ''}
+          </div>
+          <div class="image-preview-move">
+            <button type="button" onclick="moveUploadedImage(${i}, -1)" ${i === 0 ? 'disabled' : ''} title="Левее">‹</button>
+            <button type="button" onclick="moveUploadedImage(${i}, 1)" ${i === last ? 'disabled' : ''} title="Правее">›</button>
+          </div>
+          ${currentColors.length ? `
+            <select class="image-preview-color" onchange="setImageColor(${i}, this.value)" title="Цвет на фото">
+              <option value="">Без цвета</option>
+              ${currentColors.map(c => `<option value="${escapeHtml(c.id)}" ${c.id === colorId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+            </select>
+          ` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+  renderColorVariants();
 }
 
 function removeUploadedImage(index) {
   uploadedImages.splice(index, 1);
+  uploadedImageColors.splice(index, 1);
   renderImagePreviews();
+}
+
+function moveUploadedImage(index, delta) {
+  const to = index + delta;
+  if (to < 0 || to >= uploadedImages.length) return;
+  [uploadedImages[index], uploadedImages[to]] = [uploadedImages[to], uploadedImages[index]];
+  [uploadedImageColors[index], uploadedImageColors[to]] = [uploadedImageColors[to], uploadedImageColors[index]];
+  renderImagePreviews();
+}
+
+function setImageColor(index, colorId) {
+  uploadedImageColors[index] = colorId || '';
+  renderImagePreviews();
+}
+
+/* ---------- Colour variants ---------- */
+function addColorVariant(name, hex) {
+  name = String(name || '').trim();
+  if (!name) return false;
+  if (currentColors.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+    alert(`Цвет «${name}» уже добавлен`);
+    return false;
+  }
+  const id = 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  currentColors.push({ id, name, hex: hex || '#cccccc' });
+  renderImagePreviews();
+  return true;
+}
+
+function addColorPreset(index) {
+  const p = COLOR_PRESETS[index];
+  if (p) addColorVariant(p.name, p.hex);
+}
+
+function updateColorVariant(colorId, field, value) {
+  const color = currentColors.find(c => c.id === colorId);
+  if (!color) return;
+  if (field === 'name') {
+    value = String(value).trim();
+    if (!value) { renderImagePreviews(); return; }
+  }
+  color[field] = value;
+  renderImagePreviews();
+}
+
+function removeColorVariant(colorId) {
+  const color = currentColors.find(c => c.id === colorId);
+  if (!color) return;
+  const count = uploadedImageColors.filter(id => id === colorId).length;
+  const msg = count
+    ? `Удалить цвет «${color.name}»? Его фото (${count}) останутся в альбоме без цвета.`
+    : `Удалить цвет «${color.name}»?`;
+  if (!confirm(msg)) return;
+  currentColors = currentColors.filter(c => c.id !== colorId);
+  uploadedImageColors = uploadedImageColors.map(id => (id === colorId ? '' : id));
+  renderImagePreviews();
+}
+
+function pickColorPhotos(colorId) {
+  const input = document.getElementById('admin-color-photo-input');
+  if (!input) return;
+  input.dataset.colorId = colorId;
+  input.click();
+}
+
+function renderColorVariants() {
+  const container = document.getElementById('admin-colors-container');
+  const warningEl = document.getElementById('admin-colors-warning');
+  if (!container) return;
+
+  container.innerHTML = currentColors.map(c => {
+    const photos = uploadedImages
+      .map((url, i) => ({ url, i }))
+      .filter(p => uploadedImageColors[p.i] === c.id);
+    return `
+      <div class="color-card">
+        <div class="color-card-head">
+          <input type="color" class="color-hex-input" value="${escapeHtml(c.hex)}"
+                 onchange="updateColorVariant('${escapeHtml(c.id)}', 'hex', this.value)" title="Оттенок кружка на сайте">
+          <input type="text" class="form-input color-name-input" value="${escapeHtml(c.name)}"
+                 onchange="updateColorVariant('${escapeHtml(c.id)}', 'name', this.value)">
+          <span class="color-card-count">${photos.length} фото</span>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="pickColorPhotos('${escapeHtml(c.id)}')">+ Загрузить фото</button>
+          <button type="button" class="color-card-remove" onclick="removeColorVariant('${escapeHtml(c.id)}')" title="Удалить цвет">×</button>
+        </div>
+        <div class="color-card-photos">
+          ${photos.length
+            ? photos.map(p => `
+                <div class="image-preview-item small">
+                  <img src="${escapeHtml(p.url)}">
+                  <button type="button" class="image-preview-remove" onclick="setImageColor(${p.i}, '')" title="Отвязать от цвета">×</button>
+                </div>
+              `).join('')
+            : '<span class="color-card-empty">Нет фото — на сайте этот цвет не появится</span>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (warningEl) {
+    const untagged = currentColors.length ? uploadedImageColors.filter(id => !id).length : 0;
+    warningEl.textContent = untagged
+      ? `Фото без цвета: ${untagged}. Пока у товара есть цвета, покупатель их не увидит — выберите цвет под каждым фото.`
+      : '';
+  }
+}
+
+// Цвета в формате API: images — индексы фото в итоговом альбоме
+function buildColorVariantsPayload() {
+  return currentColors.map(c => ({
+    id: c.id,
+    name: c.name,
+    hex: c.hex,
+    images: uploadedImageColors
+      .map((id, i) => (id === c.id ? i : -1))
+      .filter(i => i >= 0)
+  }));
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[ch]));
 }
 
 function renderSizesTags() {
@@ -543,6 +754,7 @@ async function handleProductFormSubmit(e) {
     price_old: priceOld,
     description,
     images: uploadedImages,
+    color_variants: buildColorVariantsPayload(),
     sizes: currentSizes,
     in_stock,
     is_bestseller

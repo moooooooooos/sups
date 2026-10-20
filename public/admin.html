@@ -471,6 +471,24 @@
             </div>
 
             <div id="admin-image-previews" class="image-previews-list"></div>
+            <div style="font-size:0.75rem; color:#888; margin-top:-8px;">Стрелки меняют порядок, первое фото — главное в каталоге.</div>
+          </div>
+
+          <!-- Colour Variants Manager -->
+          <div class="form-group">
+            <label class="form-label">Цвета изделия</label>
+            <div style="font-size:0.8rem; color:#666; margin-bottom:10px;">
+              Покупатель, выбравший цвет, видит только фото этого цвета. Привяжите каждое фото к цвету: под фото выберите цвет или загрузите фото прямо в блок цвета.
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <input type="text" id="admin-input-new-color-name" class="form-input" placeholder="Например: Чёрный" style="max-width:200px;">
+              <input type="color" id="admin-input-new-color-hex" value="#1e1e1e" class="color-hex-input" title="Оттенок кружка на сайте">
+              <button type="button" id="btn-add-color" class="btn btn-secondary btn-sm">+ Добавить цвет</button>
+            </div>
+            <div class="color-presets" id="admin-color-presets"></div>
+            <div id="admin-colors-container" class="colors-manager"></div>
+            <div id="admin-colors-warning" class="colors-warning"></div>
+            <input type="file" id="admin-color-photo-input" multiple accept="image/*" style="display:none;">
           </div>
 
           <!-- Sizes Manager -->
