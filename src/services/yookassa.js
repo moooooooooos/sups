@@ -207,9 +207,7 @@ async function handleWebhook(body) {
         `━━━━━━━━━━━━━━━━━━━\n` +
         `📦 *Заказ:* \`${order.order_number}\`\n` +
         `💰 *Сумма:* ${order.total_price.toLocaleString('ru-RU')} ₽\n` +
-        `👤 *Клиент:* ${order.customer_name}\n` +
-        `📞 *Телефон:* ${order.customer_phone}\n` +
-        `🚚 *Доставка:* ${order.delivery_method} — ${order.delivery_address || 'Самовывоз'}\n` +
+        `🚚 *Доставка:* ${order.delivery_method}\n` +
         `🆔 *ID платежа:* \`${paymentId}\`\n` +
         `━━━━━━━━━━━━━━━━━━━\n` +
         `✅ Заказ переведен в статус *Оплачен*`;
@@ -262,9 +260,7 @@ async function confirmTestPayment(orderNumber) {
       `━━━━━━━━━━━━━━━━━━━\n` +
       `📦 *Заказ:* \`${order.order_number}\`\n` +
       `💰 *Сумма:* ${order.total_price.toLocaleString('ru-RU')} ₽\n` +
-      `👤 *Клиент:* ${order.customer_name}\n` +
-      `📞 *Телефон:* ${order.customer_phone}\n` +
-      `🚚 *Доставка:* ${order.delivery_method} — ${order.delivery_address || 'Самовывоз'}\n` +
+      `🚚 *Доставка:* ${order.delivery_method}\n` +
       `━━━━━━━━━━━━━━━━━━━\n` +
       `✅ Заказ переведен в статус *Оплачен*`;
 

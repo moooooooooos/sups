@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const { productPath } = require('./seo');
 
 function parseProduct(p) {
   if (!p) return null;
@@ -12,6 +13,7 @@ function parseProduct(p) {
     sizes: typeof p.sizes === 'string' ? JSON.parse(p.sizes || '[]') : p.sizes,
     color_variants: typeof p.color_variants === 'string' ? JSON.parse(p.color_variants || '[]') : (p.color_variants || []),
     related_ids: typeof p.related_ids === 'string' ? JSON.parse(p.related_ids || '[]') : (p.related_ids || []),
+    url: productPath(p),
     characteristics: typeof p.characteristics === 'string' ? JSON.parse(p.characteristics || '[]') : p.characteristics
   };
 }
@@ -66,7 +68,7 @@ function relatedProducts(product) {
   }
 
   return picked.map(parseProduct).map(p => ({
-    id: p.id, title: p.title, price: p.price, price_old: p.price_old,
+    id: p.id, title: p.title, price: p.price, price_old: p.price_old, url: p.url,
     category: p.category, image: (p.images || [])[0] || '', manual: manualIds.includes(p.id)
   }));
 }

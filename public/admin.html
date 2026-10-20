@@ -186,6 +186,11 @@
                   <option value="cancelled">Отменённые</option>
                 </select>
               </div>
+              <div class="orders-export">
+                <label>с <input type="date" id="orders-export-from" class="filter-select"></label>
+                <label>по <input type="date" id="orders-export-to" class="filter-select"></label>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="exportOrders()">⬇ Скачать в Excel</button>
+              </div>
             </div>
 
             <div class="admin-table-container">
@@ -388,6 +393,36 @@
               <div class="form-group">
                 <label class="form-label">Telegram Chat ID</label>
                 <input type="text" id="setting-tg-chat" class="form-input" placeholder="-100XXXXXXXXXX">
+              </div>
+
+              <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #eee;">
+                <h4 style="margin-bottom: 6px;">✉️ Письма покупателям</h4>
+                <p class="settings-hint">Покупатель получает письма, когда заказ оплачен, передан в доставку (с трек-номером), ждёт в пункте выдачи, получен или отменён. Удобнее всего завести ящик на своём домене в панели Beget («Почта»), например shop@sups-official.ru.</p>
+                <div class="form-group" style="display:flex; align-items:center; gap:10px;">
+                  <input type="checkbox" id="setting-emails-enabled" style="width:18px; height:18px; cursor:pointer;">
+                  <label for="setting-emails-enabled" style="cursor:pointer; font-weight:600; font-size:0.9rem;">Отправлять письма покупателям</label>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Почта отправителя (логин SMTP)</label>
+                  <input type="email" id="setting-smtp-user" class="form-input" placeholder="shop@sups-official.ru" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Пароль от этой почты</label>
+                  <input type="password" id="setting-smtp-password" class="form-input" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Имя отправителя / SMTP-сервер / порт</label>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <input type="text" id="setting-mail-from-name" class="form-input" placeholder="САПС" style="flex:1; min-width:120px;">
+                    <input type="text" id="setting-smtp-host" class="form-input" placeholder="smtp.beget.com" style="flex:1; min-width:140px;">
+                    <input type="number" id="setting-smtp-port" class="form-input" placeholder="465" style="width:90px;">
+                  </div>
+                </div>
+                <div class="form-group" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                  <input type="email" id="setting-test-email-to" class="form-input" placeholder="Куда отправить тестовое письмо" style="flex:1; min-width:200px;">
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="sendTestEmail()">Отправить тест</button>
+                </div>
+                <div id="setting-test-email-result" class="settings-hint"></div>
               </div>
 
               <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #eee;">

@@ -1280,3 +1280,40 @@
   font-weight: 400;
   font-size: 0.75rem;
 }
+
+/* Телефоны: фильтры не шире экрана — размеры переносятся на новую строку */
+@media (max-width: 600px) {
+  .filter-left-group,
+  .filter-right-group,
+  .filter-left-group > *,
+  .filter-right-group > * {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .size-chips-container {
+    flex-wrap: wrap;
+  }
+
+  .search-box {
+    min-width: 0;
+  }
+}
+
+/* Подсказка «выберите размер» */
+.modal-size-hint:empty {
+  display: none;
+}
+
+.modal-size-hint {
+  margin-top: 8px;
+  color: #d93838;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.needs-size .modal-size-btn {
+  border-color: #d93838;
+}

@@ -106,32 +106,41 @@ async function sendTelegramPhoto(photoBuffer, caption, filename = 'photo.png') {
   }
 }
 
+function escapeTg(value) {
+  return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Город из адреса доставки: «111024, Россия, Москва, …» или «Москва, ул. …» → «Москва»
+function cityOf(address) {
+  const parts = String(address || '').split(',').map(s => s.trim()).filter(Boolean);
+  return parts.find(p => !/^\d+$/.test(p) && !/^россия$/i.test(p)) || '';
+}
+
+/**
+ * Уведомление о заказе для чата магазина.
+ * Персональных данных покупателя (имя, телефон, email, адрес, комментарий) здесь нет:
+ * серверы Telegram за границей, это была бы трансграничная передача ПД (152-ФЗ).
+ * Данные покупателя — в админке по номеру заказа.
+ */
 function formatOrderNotification(order) {
   const items = Array.isArray(order.items) ? order.items : JSON.parse(order.items || '[]');
+  const city = cityOf(order.delivery_address);
 
-  let msg = `🛍 <b>НОВЫЙ ЗАКАЗ #${order.order_number}</b>\n\n`;
-  msg += `👤 <b>Клиент:</b> ${order.customer_name}\n`;
-  msg += `📞 <b>Телефон:</b> ${order.customer_phone}\n`;
-  if (order.customer_email) msg += `✉️ <b>Email:</b> ${order.customer_email}\n`;
-  msg += `🚚 <b>Доставка:</b> ${order.delivery_method || 'СДЭК'} (${order.delivery_price || 0} ₽)\n`;
-  if (order.delivery_address) msg += `📍 <b>Адрес:</b> ${order.delivery_address}\n`;
-  if (order.comment) msg += `💬 <b>Комментарий:</b> ${order.comment}\n`;
+  let msg = `🛍 <b>НОВЫЙ ЗАКАЗ #${escapeTg(order.order_number)}</b>\n\n`;
+  msg += `🚚 <b>Доставка:</b> ${escapeTg(order.delivery_method || 'СДЭК')}${city ? `, ${escapeTg(city)}` : ''} (${order.delivery_price || 0} ₽)\n`;
+  if (order.comment) msg += `💬 Есть комментарий покупателя — см. в админке\n`;
 
   msg += `\n📦 <b>Состав заказа:</b>\n`;
   items.forEach((item, idx) => {
-    msg += `${idx + 1}. <b>${item.title}</b>`;
-    if (item.size) msg += ` (Размер: ${item.size})`;
+    msg += `${idx + 1}. <b>${escapeTg(item.title)}</b>`;
+    if (item.size) msg += ` (размер ${escapeTg(item.size)})`;
+    if (item.color) msg += ` (${escapeTg(item.color)})`;
     msg += ` — ${item.quantity || 1} шт. × ${item.price} ₽\n`;
-
-    // If custom 3D ring details exist
-    if (item.is_custom || item.custom_details) {
-      const cd = item.custom_details || {};
-      msg += `   ⚙️ <i>Кастом:</i> Металл: ${cd.metal || 'Сталь'}, Текст: "${cd.text || '-'}", Шрифт: ${cd.font || '-'}\n`;
-      if (cd.imageUrl) msg += `   🖼 <i>Рисунок:</i> ${cd.imageUrl}\n`;
-    }
+    if (item.is_custom) msg += `   ⚙️ <i>Кастомное изделие — детали в админке</i>\n`;
   });
 
-  msg += `\n💰 <b>Итого к оплате:</b> <b>${order.total_price} ₽</b>`;
+  msg += `\n💰 <b>Итого:</b> <b>${order.total_price} ₽</b>`;
+  if (process.env.SITE_URL) msg += `\n\n🔗 ${process.env.SITE_URL}/admin`;
   return msg;
 }
 

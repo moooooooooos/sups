@@ -7,7 +7,8 @@ if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }
 
-const DB_PATH = path.join(DB_DIR, 'sups.db');
+// SUPS_DB_PATH — другой файл базы (проверки, скрипт смоук-теста); по умолчанию data/sups.db
+const DB_PATH = process.env.SUPS_DB_PATH || path.join(DB_DIR, 'sups.db');
 const db = new Database(DB_PATH);
 
 // Enable WAL mode for performance

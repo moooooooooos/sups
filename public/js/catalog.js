@@ -151,7 +151,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   initProductModal();
+
+  // Страница товара (адрес /…/tproduct/…): сервер передаёт id, открываем карточку сразу
+  if (window.SUPS_OPEN_PRODUCT) {
+    productPageOpenedDirectly = true;
+    openProductModal(window.SUPS_OPEN_PRODUCT);
+  }
+
+  // Кнопка «назад» после открытия товара закрывает карточку
+  window.addEventListener('popstate', () => {
+    const backdrop = document.getElementById('product-modal-backdrop');
+    if (backdrop && backdrop.classList.contains('open') && !/\/tproduct\//.test(location.pathname)) {
+      closeProductModal({ fromHistory: true });
+    }
+  });
 });
+
+// Адрес страницы, с которой открыли карточку: при закрытии возвращаемся на него
+let productReturnUrl = null;
+let pageTitleBeforeProduct = null;
+let productPageOpenedDirectly = false;
 
 async function initCatalogPage() {
   // Read query parameters from URL
@@ -783,7 +802,7 @@ function initProductModal() {
 
       const sizes = currentModalProduct.sizes || [];
       if (sizes.length > 0 && !selectedModalSize) {
-        alert('Пожалуйста, выберите размер изделия');
+        showModalSizeHint(true);
         return;
       }
 
@@ -827,6 +846,14 @@ async function openProductModal(productId) {
     modalQuantity = 1;
 
     if (window.supsAnalytics) window.supsAnalytics.track('product_view', { product_id: currentModalProduct.id });
+
+    // Адрес товара в строке браузера — ссылкой на товар можно поделиться
+    if (currentModalProduct.url && location.pathname !== currentModalProduct.url) {
+      if (!productReturnUrl) productReturnUrl = location.pathname + location.search;
+      history.pushState({ product: currentModalProduct.id }, '', currentModalProduct.url);
+    }
+    if (pageTitleBeforeProduct === null) pageTitleBeforeProduct = productPageOpenedDirectly ? '' : document.title;
+    document.title = `${currentModalProduct.title} | САПС`;
     renderModalRelated(Array.isArray(data.related) ? data.related : []);
 
     // Reset qty
@@ -1058,19 +1085,47 @@ function switchModalImage(src, thumbEl) {
   if (thumbEl) thumbEl.classList.add('active');
 }
 
+// Подсказка «выберите размер» прямо под размерами (alert не виден во встроенных браузерах соцсетей)
+function showModalSizeHint(show) {
+  const group = document.getElementById('modal-sizes-group');
+  if (!group) return;
+  let hint = document.getElementById('modal-size-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'modal-size-hint';
+    hint.className = 'modal-size-hint';
+    hint.setAttribute('role', 'alert');
+    group.appendChild(hint);
+  }
+  hint.textContent = show ? 'Выберите размер, чтобы добавить украшение в корзину' : '';
+  group.classList.toggle('needs-size', show);
+  if (show) group.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
 function selectModalSize(size, btnEl) {
   selectedModalSize = size;
+  showModalSizeHint(false);
   const btns = document.querySelectorAll('.modal-size-btn');
   btns.forEach(b => b.classList.remove('active'));
   if (btnEl) btnEl.classList.add('active');
 }
 
-function closeProductModal() {
+function closeProductModal(options = {}) {
   const backdrop = document.getElementById('product-modal-backdrop');
   if (backdrop) {
     backdrop.classList.remove('open');
     document.body.style.overflow = '';
   }
+  // Возвращаем адрес страницы: открыли товар по прямой ссылке — уходим в раздел
+  if (!options.fromHistory && /\/tproduct\//.test(location.pathname)) {
+    const back = productReturnUrl || (productPageOpenedDirectly ? '/' + location.pathname.split('/')[1] : null);
+    if (back) history.replaceState(null, '', back);
+  }
+  if (pageTitleBeforeProduct) document.title = pageTitleBeforeProduct;
+  else if (pageTitleBeforeProduct === '') document.title = 'Каталог украшений | САПС';
+  pageTitleBeforeProduct = null;
+  productReturnUrl = null;
+  productPageOpenedDirectly = false;
 }
 
 // Make functions available globally for inline onclick

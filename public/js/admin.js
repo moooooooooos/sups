@@ -1744,10 +1744,13 @@ function renderOrderCard({ order: o, history, customer }) {
 
     <div class="order-card-actions" style="margin-top:16px;">
       <button type="button" class="btn btn-secondary btn-sm" id="order-copy-btn">Скопировать данные</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="order-print-btn">🖨 Упаковочный лист</button>
       ${o.status !== 'cancelled' ? `<button type="button" class="btn btn-sm btn-danger-outline" onclick="cancelOrderFromCard(${o.id})">Отменить заказ</button>` : ''}
     </div>
     ${o.pd_consent_at ? `<div class="order-card-sub" style="margin-top:10px;">Согласие на обработку ПД: ${formatDate(o.pd_consent_at)}</div>` : ''}
   `;
+
+  document.getElementById('order-print-btn').addEventListener('click', () => printPackingSlip(o));
 
   document.getElementById('order-copy-btn').addEventListener('click', async e => {
     try {
@@ -1757,6 +1760,62 @@ function renderOrderCard({ order: o, history, customer }) {
       e.target.textContent = 'Не удалось скопировать';
     }
   });
+}
+
+// Выгрузка заказов в CSV для Excel (с учётом фильтра статуса и дат)
+async function exportOrders() {
+  const params = new URLSearchParams({
+    status: (document.getElementById('admin-orders-status-filter') || {}).value || 'all',
+    from: document.getElementById('orders-export-from').value,
+    to: document.getElementById('orders-export-to').value
+  });
+  try {
+    const res = await fetch(`/api/admin/orders-export?${params}`, { headers: { 'Authorization': `Bearer ${adminToken}` } });
+    if (!res.ok) throw new Error('Не удалось выгрузить заказы');
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1] || 'orders.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+// Упаковочный лист: состав для сборки, получатель и доставка — печать на A4
+function printPackingSlip(o) {
+  const items = Array.isArray(o.items) ? o.items : [];
+  const count = items.reduce((n, i) => n + (parseInt(i.quantity, 10) || 1), 0);
+  const w = window.open('', '_blank', 'width=800,height=900');
+  if (!w) { alert('Разрешите всплывающие окна, чтобы распечатать лист'); return; }
+  w.document.write(`<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Упаковочный лист ${escapeHtml(o.order_number)}</title>
+    <style>
+      body { font-family: Arial, sans-serif; color: #111; margin: 24px; }
+      h1 { font-size: 22px; margin: 0 0 4px; } .sub { color: #666; font-size: 13px; margin-bottom: 18px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; font-size: 14px; line-height: 1.5; }
+      .box { border: 1px solid #ccc; border-radius: 6px; padding: 10px 12px; } .box b.t { display: block; margin-bottom: 4px; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; } th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
+      th { background: #f3f3f3; } td.c { text-align: center; width: 60px; } td.chk { width: 40px; }
+      .total { margin-top: 12px; font-size: 14px; } .note { margin-top: 18px; font-size: 13px; color: #444; }
+      @media print { body { margin: 10mm; } button { display: none; } }
+    </style></head><body>
+    <button onclick="print()" style="float:right;padding:8px 14px;">Печать</button>
+    <h1>Заказ ${escapeHtml(o.order_number)}</h1>
+    <div class="sub">от ${formatDate(o.created_at)} · ${escapeHtml(ORDER_STATUS_LABELS[o.status] || o.status)} · ${o.payment_status === 'paid' ? 'оплачен' : 'НЕ ОПЛАЧЕН'}</div>
+    <div class="grid">
+      <div class="box"><b class="t">Получатель</b>${escapeHtml(o.customer_name)}<br>${escapeHtml(o.customer_phone)}<br>${escapeHtml(o.customer_email || '')}</div>
+      <div class="box"><b class="t">Доставка</b>${escapeHtml(o.delivery_method || '')}<br>${escapeHtml(o.delivery_address || '')}${o.tracking_number ? `<br>Трек: <b>${escapeHtml(o.tracking_number)}</b>` : ''}</div>
+    </div>
+    <table>
+      <tr><th class="chk">✓</th><th>Изделие</th><th>Размер</th><th>Цвет</th><th>Кол-во</th></tr>
+      ${items.map(i => `<tr><td class="chk"></td><td>${escapeHtml(i.title)}${i.is_custom && i.custom_details ? `<br><small>${escapeHtml(typeof i.custom_details === 'string' ? i.custom_details : JSON.stringify(i.custom_details))}</small>` : ''}</td><td class="c">${escapeHtml(i.size || '—')}</td><td>${escapeHtml(i.color || '—')}</td><td class="c">${i.quantity || 1}</td></tr>`).join('')}
+    </table>
+    <div class="total">Всего изделий: <b>${count}</b> · Сумма заказа: <b>${rubles(o.total_price)}</b></div>
+    ${o.comment ? `<div class="note"><b>Комментарий покупателя:</b> ${escapeHtml(o.comment)}</div>` : ''}
+    </body></html>`);
+  w.document.close();
 }
 
 async function createOrderShipment(orderId) {
@@ -1849,6 +1908,13 @@ async function loadSettings() {
     setVal('setting-ya-token', s.yandex_delivery_token || '');
     setVal('setting-ya-station', s.yandex_delivery_station_id || '');
     setVal('setting-dadata-key', s.dadata_api_key || '');
+    setVal('setting-smtp-user', s.smtp_user || '');
+    setVal('setting-smtp-password', s.smtp_password || '');
+    setVal('setting-mail-from-name', s.mail_from_name || 'САПС');
+    setVal('setting-smtp-host', s.smtp_host || 'smtp.beget.com');
+    setVal('setting-smtp-port', s.smtp_port || '465');
+    const emailsOn = document.getElementById('setting-emails-enabled');
+    if (emailsOn) emailsOn.checked = s.emails_enabled === '1';
     const cdekTest = document.getElementById('setting-cdek-test');
     if (cdekTest) cdekTest.checked = s.cdek_test_mode !== '0';
     const yaTest = document.getElementById('setting-ya-test');
@@ -1882,13 +1948,19 @@ async function handleSettingsSubmit(e) {
     cdek_shipment_point: 'setting-cdek-shipment-point',
     yandex_delivery_token: 'setting-ya-token',
     yandex_delivery_station_id: 'setting-ya-station',
-    dadata_api_key: 'setting-dadata-key'
+    dadata_api_key: 'setting-dadata-key',
+    smtp_user: 'setting-smtp-user',
+    smtp_password: 'setting-smtp-password',
+    mail_from_name: 'setting-mail-from-name',
+    smtp_host: 'setting-smtp-host',
+    smtp_port: 'setting-smtp-port'
   };
   Object.entries(deliveryFields).forEach(([key, id]) => {
     const el = document.getElementById(id);
     if (el) payload[key] = el.value.trim();
   });
   payload.cdek_test_mode = document.getElementById('setting-cdek-test')?.checked ? '1' : '0';
+  payload.emails_enabled = document.getElementById('setting-emails-enabled')?.checked ? '1' : '0';
   payload.yandex_delivery_test_mode = document.getElementById('setting-ya-test')?.checked ? '1' : '0';
 
   try {
@@ -1900,9 +1972,32 @@ async function handleSettingsSubmit(e) {
       },
       body: JSON.stringify(payload)
     });
-    if (res.ok) alert('Настройки сохранены успешно!');
+    if (res.ok && !e.silent) alert('Настройки сохранены успешно!');
   } catch (e) {
     alert('Ошибка сохранения настроек');
+  }
+}
+
+// Тестовое письмо: сначала сохраняем настройки, потом проверяем SMTP
+async function sendTestEmail() {
+  const resultEl = document.getElementById('setting-test-email-result');
+  const to = document.getElementById('setting-test-email-to').value.trim();
+  resultEl.style.color = '#777';
+  resultEl.textContent = 'Сохраняем настройки и отправляем…';
+  try {
+    await handleSettingsSubmit({ preventDefault() {}, silent: true });
+    const res = await fetch('/api/admin/test-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+      body: JSON.stringify({ to })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка отправки');
+    resultEl.style.color = '#15803d';
+    resultEl.textContent = `Письмо отправлено на ${to}. Проверьте входящие и папку «Спам».`;
+  } catch (e) {
+    resultEl.style.color = 'var(--admin-red)';
+    resultEl.textContent = e.message;
   }
 }
 

@@ -6,9 +6,12 @@ const { requireAdmin } = require('./auth');
 const upload = require('../services/uploader');
 const orderStatus = require('../services/orderStatus');
 const cdekShipments = require('../services/cdekShipments');
+const customerEmails = require('../services/customerEmails');
 
 // Статусы отправлений СДЭК подтягиваются в фоне раз в 30 минут
 cdekShipments.startAutoSync();
+// Письма покупателям о статусах заказа — фоновая очередь раз в минуту
+customerEmails.startWorker();
 
 // Protect all admin endpoints
 router.use(requireAdmin);
@@ -598,6 +601,47 @@ router.get('/orders/:id', (req, res) => {
   }
 });
 
+// GET /api/admin/orders-export?status=&from=&to= - Заказы в CSV для Excel (разделитель «;», UTF-8 с BOM)
+router.get('/orders-export', (req, res) => {
+  try {
+    const where = [];
+    const params = [];
+    if (req.query.status && req.query.status !== 'all') { where.push('status = ?'); params.push(req.query.status); }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(req.query.from || '')) { where.push("date(created_at, '+5 hours') >= ?"); params.push(req.query.from); }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(req.query.to || '')) { where.push("date(created_at, '+5 hours') <= ?"); params.push(req.query.to); }
+    const rows = db.prepare(`SELECT * FROM orders ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY id`).all(...params);
+
+    const cell = v => {
+      const s = v == null ? '' : String(v);
+      return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const header = ['Номер', 'Дата (Екб)', 'Статус', 'Оплата', 'Дата оплаты', 'Покупатель', 'Телефон', 'Email',
+      'Состав', 'Кол-во, шт', 'Товары, ₽', 'Скидка, ₽', 'Бонусы, ₽', 'Промокод', 'Доставка, ₽', 'Итого, ₽',
+      'Способ доставки', 'Адрес / ПВЗ', 'Трек-номер', 'Устройство', 'Комментарий'];
+    const lines = rows.map(o => {
+      const items = JSON.parse(o.items || '[]');
+      const toLocal = d => (d ? db.prepare("SELECT datetime(?, '+5 hours') AS d").get(d).d : '');
+      return [
+        o.order_number, toLocal(o.created_at), orderStatus.label(o.status),
+        o.payment_status === 'paid' ? 'оплачен' : (o.payment_status === 'canceled' ? 'не прошла' : 'нет'),
+        toLocal(o.paid_at), o.customer_name, o.customer_phone, o.customer_email,
+        items.map(i => `${i.title}${i.size ? ` р.${i.size}` : ''}${i.color ? ` ${i.color}` : ''} ×${i.quantity || 1}`).join(' | '),
+        items.reduce((n, i) => n + (parseInt(i.quantity, 10) || 1), 0),
+        o.subtotal, o.discount_amount || 0, o.bonus_used || 0, o.promo_code || '', o.delivery_price || 0, o.total_price,
+        o.delivery_method, o.delivery_address, o.tracking_number || '', o.device || '', o.comment || ''
+      ].map(cell).join(';');
+    });
+    const csv = '﻿' + [header.join(';'), ...lines].join('\r\n');
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="sups-orders-${stamp}.csv"`);
+    res.send(csv);
+  } catch (err) {
+    console.error('Orders export error:', err);
+    res.status(500).json({ error: 'Ошибка выгрузки заказов' });
+  }
+});
+
 // POST /api/admin/orders/:id/shipment - Create CDEK shipment for the order
 router.post('/orders/:id/shipment', async (req, res) => {
   try {
@@ -648,9 +692,26 @@ router.post('/settings', (req, res) => {
     });
 
     updateMany(settings);
+
+    // Письма шлём только по событиям после включения — без рассылки по старым заказам
+    if (settings.emails_enabled === '1' && !db.prepare("SELECT 1 FROM settings WHERE key = 'emails_enabled_at' AND value != ''").get()) {
+      db.prepare("INSERT INTO settings (key, value) VALUES ('emails_enabled_at', datetime('now')) ON CONFLICT(key) DO UPDATE SET value = datetime('now')").run();
+    }
     res.json({ success: true, message: 'Настройки успешно сохранены' });
   } catch (err) {
     res.status(500).json({ error: 'Ошибка при сохранении настроек' });
+  }
+});
+
+// POST /api/admin/test-email - Проверка почты для писем покупателям
+router.post('/test-email', async (req, res) => {
+  const to = String((req.body && req.body.to) || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return res.status(400).json({ error: 'Укажите email, куда отправить тестовое письмо' });
+  try {
+    await customerEmails.sendTest(to);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

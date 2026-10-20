@@ -1380,3 +1380,18 @@ body.admin-body {
   width: 100%;
   box-sizing: border-box;
 }
+
+/* Выгрузка заказов */
+.orders-export {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.orders-export input[type="date"] {
+  padding: 4px 6px;
+  margin-left: 4px;
+}

@@ -399,7 +399,13 @@ class SupsCart {
       if (successModal) successModal.classList.add('open');
 
     } catch (err) {
-      alert(`Не удалось оформить заказ: ${err.message}`);
+      // Ошибку показываем в форме: системный alert не виден во встроенных браузерах соцсетей
+      if (window.supsDelivery && window.supsDelivery.showError) {
+        window.supsDelivery.showError(`Не удалось оформить заказ: ${err.message}`);
+        document.getElementById('delivery-widget')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      } else {
+        alert(`Не удалось оформить заказ: ${err.message}`);
+      }
     } finally {
       const submitBtn = document.getElementById('btn-submit-order');
       if (submitBtn) {

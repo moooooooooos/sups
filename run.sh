@@ -1,20 +1,32 @@
 #!/usr/bin/env bash
-set -e
+# Установка или обновление САПС на чистом VPS одной командой (запускать от root).
+# Повторный запуск безопасен: код обновляется, база заказов, фото и настройки остаются.
+set -euo pipefail
 
-echo "🚀 Запуск автоматической установки САПС на сервере..."
+APP_DIR=/var/www/sups-store
+REPO=https://github.com/moooooooooos/sups.git
+BRANCH="${BRANCH:-main}"
 
-# Настройка SSH для работы из терминала Mac
-sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config 2>/dev/null || true
-if [ -d /etc/ssh/sshd_config.d ]; then
-  sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config.d/* 2>/dev/null || true
-fi
-systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true
-
-# Установка git и клонирование
+echo "🚀 Установка САПС на сервер..."
 apt-get update -y
 apt-get install -y git curl
 
-rm -rf /var/www/sups-store
-git clone https://github.com/moooooooooos/sups.git /var/www/sups-store
-cd /var/www/sups-store
+if [ -d "$APP_DIR/.git" ]; then
+  echo "📦 Сайт уже установлен — обновляем код, данные не трогаем"
+  # Копия базы до обновления (в старых версиях data/sups.db лежал в git и мог быть удалён при pull)
+  SAFE="/var/backups/sups/pre-update-$(date +%Y-%m-%d_%H%M)"
+  mkdir -p "$SAFE"
+  cp -a "$APP_DIR"/data/sups.db* "$SAFE"/ 2>/dev/null || true
+  git -C "$APP_DIR" fetch origin "$BRANCH"
+  git -C "$APP_DIR" checkout "$BRANCH"
+  git -C "$APP_DIR" pull --ff-only origin "$BRANCH"
+  if [ ! -f "$APP_DIR/data/sups.db" ] && [ -f "$SAFE/sups.db" ]; then
+    cp -a "$SAFE"/sups.db* "$APP_DIR/data/"
+    echo "♻️  База восстановлена из копии $SAFE"
+  fi
+else
+  git clone -b "$BRANCH" "$REPO" "$APP_DIR"
+fi
+
+cd "$APP_DIR"
 bash deploy.sh

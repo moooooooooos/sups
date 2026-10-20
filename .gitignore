@@ -1,4 +1,10 @@
 node_modules/
 .claude/
-# Секреты токенов входа, создаются на сервере автоматически
+# Данные живого сайта: база, секреты, настройки домена — только на сервере
+data/sups.db
+data/sups.db-shm
+data/sups.db-wal
 data/.secrets.json
+data/.deploy.json
+public/uploads/*
+!public/uploads/.gitkeep
