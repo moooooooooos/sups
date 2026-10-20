@@ -93,7 +93,8 @@ pm2 startup systemd -u root --hp /root >/dev/null 2>&1 || true
 # Ежедневный бэкап в 04:30 (хранятся 14 последних копий в /var/backups/sups)
 chmod +x scripts/backup-db.sh
 CRON_LINE="30 4 * * * $APP_DIR/scripts/backup-db.sh >> /var/log/sups-backup.log 2>&1"
-( crontab -l 2>/dev/null | grep -v 'scripts/backup-db.sh'; echo "$CRON_LINE" ) | crontab -
+# На новом сервере crontab пуст: crontab -l и grep завершаются с ошибкой, поэтому || true
+{ crontab -l 2>/dev/null | grep -v 'scripts/backup-db.sh' || true; echo "$CRON_LINE"; } | crontab -
 
 # 8. nginx, фаервол, SSL
 echo "🌐 8/8 nginx и SSL..."
