@@ -6,6 +6,7 @@ const { optionalCustomer } = require('./customers');
 const yookassa = require('../services/yookassa');
 const delivery = require('../services/delivery');
 const contacts = require('../services/contacts');
+const pricing = require('../services/pricing');
 
 function setting(key, fallback) {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
@@ -29,7 +30,8 @@ router.post('/', optionalCustomer, async (req, res) => {
       delivery_address,
       delivery: deliverySelection,
       comment,
-      items,
+      items: rawItems,
+      promo_code,
       use_bonuses = false,
       offer_accepted = false,
       pd_consent = false,
@@ -44,7 +46,7 @@ router.post('/', optionalCustomer, async (req, res) => {
       return res.status(400).json({ error: 'Пожалуйста, укажите имя' });
     }
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    if (!rawItems || !Array.isArray(rawItems) || rawItems.length === 0) {
       return res.status(400).json({ error: 'Корзина пуста' });
     }
 
@@ -60,13 +62,28 @@ router.post('/', optionalCustomer, async (req, res) => {
     const phoneClean = contacts.formatPhone(phoneNormalized);
     const emailClean = emailCheck.email;
 
-    // Calculate subtotal
-    let subtotal = 0;
-    items.forEach(item => {
-      const p = parseFloat(item.price) || 0;
-      const q = parseInt(item.quantity) || 1;
-      subtotal += p * q;
-    });
+    // Цены позиций и промокод — только из базы, цены из корзины браузера не принимаются
+    const priced = pricing.priceItems(rawItems);
+    if (!priced.ok) {
+      return res.status(400).json({ error: priced.error, field: 'items', item_index: priced.item_index });
+    }
+    const { items, subtotal, itemsCount } = priced;
+
+    // Корзина показала старую цену: не выставляем счёт на сумму, которую покупатель не видел
+    const changed = items
+      .map((item, i) => ({ index: i, price: item.price, client: parseFloat(rawItems[i].price) }))
+      .filter(c => Number.isFinite(c.client) && c.client !== c.price);
+    if (changed.length) {
+      return res.status(409).json({
+        error: 'Цены в корзине изменились, проверьте сумму и подтвердите заказ ещё раз',
+        field: 'items',
+        prices: changed.map(({ index, price }) => ({ index, price }))
+      });
+    }
+
+    const promoCheck = pricing.checkPromo(promo_code);
+    if (!promoCheck.ok) return res.status(400).json({ error: promoCheck.error, field: 'promo' });
+    const promo = promoCheck.promo;
 
     let customerId = req.customer ? req.customer.id : null;
     let customerObj = req.customer || null;
@@ -81,10 +98,11 @@ router.post('/', optionalCustomer, async (req, res) => {
     let discountAmount = 0;
     let bonusUsed = 0;
 
-    // Apply customer personal discount if available
-    if (customerObj && customerObj.personal_discount > 0) {
-      discountAmount = Math.round((subtotal * customerObj.personal_discount) / 100);
-    }
+    // Скидки не суммируются: действует большая из промокода и личной скидки покупателя
+    const personalPct = customerObj && customerObj.personal_discount > 0 ? customerObj.personal_discount : 0;
+    const promoPct = promo ? promo.discount_percent : 0;
+    const appliedPromo = promo && promoPct >= personalPct ? promo : null;
+    discountAmount = pricing.percentDiscount(subtotal, Math.max(personalPct, promoPct));
 
     let payableSubtotal = Math.max(0, subtotal - discountAmount);
 
@@ -95,7 +113,6 @@ router.post('/', optionalCustomer, async (req, res) => {
     }
 
     // Доставка проверяется у перевозчика, цена считается здесь, а не берётся из браузера
-    const itemsCount = items.reduce((n, item) => n + (parseInt(item.quantity, 10) || 1), 0);
     const providers = delivery.enabledProviders();
     let shipping;
     if (providers.cdek || providers.yandex) {
@@ -125,6 +142,10 @@ router.post('/', optionalCustomer, async (req, res) => {
     const deliveryAddress = shipping.address_text;
     const total_price = payableSubtotal + deliv;
 
+    if (appliedPromo && !pricing.consumePromo(appliedPromo.id)) {
+      return res.status(400).json({ error: 'Превышен лимит использования промокода', field: 'promo' });
+    }
+
     // Generate Order Number: SUPS-YYYYMMDD-XXXX
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randSuffix = Math.floor(1000 + Math.random() * 9000);
@@ -134,12 +155,12 @@ router.post('/', optionalCustomer, async (req, res) => {
       INSERT INTO orders (
         order_number, customer_id, customer_name, customer_phone, customer_email,
         delivery_method, delivery_address, comment, items,
-        subtotal, delivery_price, bonus_used, discount_amount, total_price, status, pd_consent_at, device,
+        subtotal, delivery_price, bonus_used, discount_amount, promo_code, total_price, status, pd_consent_at, device,
         delivery_provider, delivery_type, delivery_point_id, delivery_city_code
       ) VALUES (
         @order_number, @customer_id, @customer_name, @customer_phone, @customer_email,
         @delivery_method, @delivery_address, @comment, @items,
-        @subtotal, @delivery_price, @bonus_used, @discount_amount, @total_price, 'new', datetime('now'), @device,
+        @subtotal, @delivery_price, @bonus_used, @discount_amount, @promo_code, @total_price, 'new', datetime('now'), @device,
         @delivery_provider, @delivery_type, @delivery_point_id, @delivery_city_code
       )
     `);
@@ -162,6 +183,7 @@ router.post('/', optionalCustomer, async (req, res) => {
       delivery_price: deliv,
       bonus_used: bonusUsed,
       discount_amount: discountAmount,
+      promo_code: appliedPromo ? appliedPromo.code : null,
       total_price,
       device: ['mobile', 'tablet', 'desktop'].includes(device) ? device : null
     });
@@ -224,7 +246,8 @@ router.post('/', optionalCustomer, async (req, res) => {
           customer_email: emailClean,
           delivery_method,
           delivery_price: deliv,
-          items
+          // В чеке цены со скидкой и бонусами, чтобы строки сходились с суммой платежа
+          items: pricing.receiptItems(items, payableSubtotal)
         },
         returnUrl
       });

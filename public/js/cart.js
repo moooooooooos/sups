@@ -58,6 +58,8 @@ class SupsCart {
         color: color,
         is_custom: isCustom,
         custom_details: item.custom_details || null,
+        // Для кастомных колец сервер считает цену по модели и опции логотипа
+        ...(isCustom && item.model_id ? { model_id: item.model_id, remove_logo: item.remove_logo === true } : {}),
         quantity: qty
       });
     }
@@ -372,6 +374,13 @@ class SupsCart {
         const dw = window.supsDelivery;
         if (dw && data.field === 'delivery') { dw.showError(data.error); return; }
         if (dw && (data.field === 'phone' || data.field === 'email')) { dw.fieldError(data.field, data.error); return; }
+        // Цены сменились на сервере: обновляем корзину, чтобы покупатель увидел новую сумму
+        if (res.status === 409 && Array.isArray(data.prices)) {
+          data.prices.forEach(({ index, price }) => { if (this.items[index]) this.items[index].price = price; });
+          this.saveCart();
+          this.updateCheckoutSummary();
+        }
+        if (data.field === 'promo') { this.appliedPromo = null; this.updateCheckoutSummary(); }
         throw new Error(data.error || 'сервер не принял заказ, попробуйте ещё раз');
       }
 
