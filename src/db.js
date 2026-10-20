@@ -146,6 +146,50 @@ try { db.exec("ALTER TABLE orders ADD COLUMN delivery_type TEXT;"); } catch (e) 
 try { db.exec("ALTER TABLE orders ADD COLUMN delivery_point_id TEXT;"); } catch (e) {}
 try { db.exec("ALTER TABLE orders ADD COLUMN delivery_city_code INTEGER;"); } catch (e) {}
 
+// Отправление у перевозчика: uuid заказа в СДЭК, трек-номер, последний статус перевозчика
+try { db.exec("ALTER TABLE orders ADD COLUMN shipment_uuid TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE orders ADD COLUMN tracking_number TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE orders ADD COLUMN shipment_status TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE orders ADD COLUMN shipment_synced_at TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE orders ADD COLUMN shipment_error TEXT;"); } catch (e) {}
+
+// История статусов заказа пишется триггерами — при любом изменении статуса (оплата, админка, СДЭК)
+db.exec(`
+  CREATE TABLE IF NOT EXISTS order_status_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    order_id INTEGER NOT NULL,
+    status TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS idx_order_status_history ON order_status_history(order_id, id);
+
+  CREATE TRIGGER IF NOT EXISTS trg_order_status_insert AFTER INSERT ON orders
+  BEGIN
+    INSERT INTO order_status_history (order_id, status) VALUES (NEW.id, COALESCE(NEW.status, 'new'));
+  END;
+
+  CREATE TRIGGER IF NOT EXISTS trg_order_status_update AFTER UPDATE OF status ON orders
+  WHEN OLD.status IS NOT NEW.status
+  BEGIN
+    INSERT INTO order_status_history (order_id, status) VALUES (NEW.id, NEW.status);
+  END;
+
+  -- Заказы, созданные до появления истории: текущий статус на дату создания
+  INSERT INTO order_status_history (order_id, status, created_at)
+  SELECT o.id, COALESCE(o.status, 'new'), o.created_at FROM orders o
+  WHERE NOT EXISTS (SELECT 1 FROM order_status_history h WHERE h.order_id = o.id);
+`);
+
+// Корзина удалённых товаров: строка товара целиком, восстановление с тем же id
+db.exec(`
+  CREATE TABLE IF NOT EXISTS products_trash (
+    id INTEGER PRIMARY KEY,
+    title TEXT,
+    data TEXT NOT NULL,
+    deleted_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+
 // Собственная анонимная веб-аналитика: визиты и события (без IP и без привязки к покупателю)
 db.exec(`
   CREATE TABLE IF NOT EXISTS analytics_sessions (

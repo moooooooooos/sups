@@ -29,16 +29,33 @@
     .orders-list { display: flex; flex-direction: column; gap: 20px; }
     .order-card { background: #fff; border-radius: 16px; border: 1px solid var(--border-color); padding: 24px; }
     .order-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px; border-bottom: 1px solid #f0f0f0; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
-    .order-status { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
-    .status-new { background: #e3f2fd; color: #1976d2; }
-    .status-processing { background: #fff3e0; color: #f57c00; }
-    .status-shipped { background: #f3e5f5; color: #7b1fa2; }
-    .status-completed { background: #e8f5e9; color: #388e3c; }
-    .status-cancelled { background: #ffebee; color: #d32f2f; }
+    .order-status { padding: 4px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+    .status-new { background: #eef2ff; color: #4338ca; }
+    .status-paid { background: #e0f2fe; color: #0369a1; }
+    .status-processing { background: #fff7ed; color: #c2410c; }
+    .status-shipped { background: #f3e8ff; color: #7e22ce; }
+    .status-ready_for_pickup { background: #fef9c3; color: #a16207; }
+    .status-delivered, .status-completed { background: #dcfce7; color: #15803d; }
+    .status-cancelled, .status-returned { background: #fee2e2; color: #b91c1c; }
+    .order-progress { display: flex; gap: 4px; margin: 4px 0 16px; }
+    .order-progress-step { flex: 1; min-width: 0; }
+    .order-progress-bar { height: 4px; border-radius: 2px; background: #eee; }
+    .order-progress-step.done .order-progress-bar { background: #111; }
+    .order-progress-step.current .order-progress-bar { background: #111; }
+    .order-progress-label { font-size: 0.7rem; color: #999; margin-top: 6px; line-height: 1.25; }
+    .order-progress-step.done .order-progress-label, .order-progress-step.current .order-progress-label { color: #111; }
+    .order-progress-step.current .order-progress-label { font-weight: 700; }
+    .order-progress-date { font-size: 0.68rem; color: #999; }
+    .order-alert { padding: 10px 14px; border-radius: 10px; background: #fee2e2; color: #991b1b; font-size: 0.85rem; margin-bottom: 14px; }
+    .order-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 20px; font-size: 0.85rem; color: #444; margin-bottom: 14px; }
+    .order-info b { color: #111; }
+    .order-info a { color: #000; font-weight: 700; text-decoration: underline; }
+    @media (max-width: 560px) { .order-progress-label { font-size: 0.62rem; } }
 
     .order-item-row { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-bottom: 1px dashed #eee; }
     .order-item-row:last-child { border-bottom: none; }
     .order-item-img { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; border: 1px solid #eee; }
+  </style>
 </head>
 <body>
   <!-- Header -->
@@ -409,26 +426,54 @@
           return;
         }
 
+        const STATUS_LABELS = { new: 'Ожидает оплаты', paid: 'Оплачен, в обработке', processing: 'Собираем заказ', shipped: 'Передан в доставку', ready_for_pickup: 'Ждёт в пункте выдачи', delivered: 'Получен', completed: 'Получен', returned: 'Возврат', cancelled: 'Отменён' };
+        const STEP_OF = { new: 0, paid: 1, processing: 2, shipped: 3, ready_for_pickup: 4, delivered: 5, completed: 5 };
+        const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+
+        // Шаги заказа: для курьера нет шага «в пункте выдачи»
+        function progressHtml(o) {
+          const steps = [
+            { key: 'new', label: 'Оформлен' },
+            { key: 'paid', label: 'Оплачен' },
+            { key: 'processing', label: 'Собираем' },
+            { key: 'shipped', label: 'В пути' },
+            ...(o.delivery_type === 'courier' ? [] : [{ key: 'ready_for_pickup', label: 'В пункте выдачи' }]),
+            { key: 'delivered', label: 'Получен' }
+          ];
+          const current = STEP_OF[o.status] ?? 0;
+          const dateOf = key => {
+            const h = (o.history || []).filter(x => x.status === key || (key === 'delivered' && x.status === 'completed')).pop();
+            return h ? formatDate(h.created_at) : '';
+          };
+          return `<div class="order-progress">${steps.map(s => {
+            const step = STEP_OF[s.key];
+            const cls = step < current ? 'done' : step === current ? 'current' : '';
+            const date = cls ? dateOf(s.key) : '';
+            return `<div class="order-progress-step ${cls}"><div class="order-progress-bar"></div><div class="order-progress-label">${s.label}${date ? `<div class="order-progress-date">${date}</div>` : ''}</div></div>`;
+          }).join('')}</div>`;
+        }
+
         container.innerHTML = orders.map(o => {
           const items = Array.isArray(o.items) ? o.items : [];
           const statusClass = `status-${o.status || 'new'}`;
-          const statusLabels = { new: 'Новый', processing: 'В обработке', shipped: 'Отправлен', completed: 'Выполнен', cancelled: 'Отменен' };
+          const isFinalBad = o.status === 'cancelled' || o.status === 'returned';
+          const paid = o.payment_status === 'paid' || o.paid_at;
 
           const itemsHtml = items.map(item => `
             <div class="order-item-row">
-              <img src="${item.image || '/assets/placeholder.jpg'}" class="order-item-img">
+              <img src="${esc(item.image || '/assets/placeholder.jpg')}" class="order-item-img">
               <div style="flex:1;">
-                <strong style="font-size:0.95rem;">${item.title}</strong>
-                ${item.size ? `<div style="font-size:0.8rem; color:#666;">Размер: ${item.size}</div>` : ''}
+                <strong style="font-size:0.95rem;">${esc(item.title)}</strong>
+                <div style="font-size:0.8rem; color:#666;">${[item.size ? `Размер: ${esc(item.size)}` : '', item.color ? `Цвет: ${esc(item.color)}` : '', `${item.quantity || 1} шт.`].filter(Boolean).join(' · ')}</div>
               </div>
               <div style="text-align:right;">
-                <div style="font-weight:700; font-size:0.95rem;">${item.price} ₽</div>
-                <a href="/leave-review?product_id=${item.id}" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:4px 8px; margin-top:4px;">Отзыв</a>
+                <div style="font-weight:700; font-size:0.95rem;">${(item.price * (item.quantity || 1)).toLocaleString('ru-RU')} ₽</div>
+                ${['delivered', 'completed'].includes(o.status) && item.id && !item.is_custom ? `<a href="/leave-review?product_id=${esc(item.id)}" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:4px 8px; margin-top:4px;">Отзыв</a>` : ''}
               </div>
             </div>
           `).join('');
 
-          const generalReviewBtn = items.length >= 2 ? `
+          const generalReviewBtn = items.length >= 2 && ['delivered', 'completed'].includes(o.status) ? `
             <div style="margin-top:14px; text-align:right; border-top:1px solid #f0f0f0; padding-top:10px;">
               <a href="/leave-review?order_id=${o.id}" class="btn btn-secondary btn-sm" style="font-size:0.8rem;">
                 ✨ Написать общий отзыв на весь заказ (${items.length} украшения)
@@ -440,13 +485,22 @@
             <div class="order-card">
               <div class="order-header">
                 <div>
-                  <strong style="font-size:1.1rem;">Заказ #${o.order_number}</strong>
+                  <strong style="font-size:1.1rem;">Заказ #${esc(o.order_number)}</strong>
                   <span style="font-size:0.85rem; color:#888; margin-left:8px;">${formatDate(o.created_at)}</span>
                 </div>
                 <div>
-                  <span class="order-status ${statusClass}">${statusLabels[o.status] || o.status}</span>
+                  <span class="order-status ${statusClass}">${STATUS_LABELS[o.status] || esc(o.status)}</span>
                   <strong style="margin-left:12px; font-size:1.1rem;">${o.total_price.toLocaleString('ru-RU')} ₽</strong>
                 </div>
+              </div>
+              ${isFinalBad
+                ? `<div class="order-alert">${o.status === 'cancelled' ? 'Заказ отменён.' : 'Заказ возвращается отправителю.'} Если это ошибка — напишите нам в Telegram @sups_steel.</div>`
+                : progressHtml(o)}
+              <div class="order-info">
+                <div>Оплата: <b>${paid ? `оплачено${o.paid_at ? ` ${formatDate(o.paid_at)}` : ''}` : (o.payment_status === 'canceled' ? 'не прошла' : 'ожидается')}</b></div>
+                <div>Доставка: <b>${esc(o.delivery_method || '—')}</b>${o.delivery_price ? `, ${o.delivery_price.toLocaleString('ru-RU')} ₽` : ', бесплатно'}</div>
+                <div>Адрес: ${esc(o.delivery_address || '—')}</div>
+                ${o.tracking_number ? `<div>Трек-номер: <b>${esc(o.tracking_number)}</b>${o.tracking_url ? ` · <a href="${esc(o.tracking_url)}" target="_blank" rel="noopener">отследить</a>` : ''}</div>` : ''}
               </div>
               <div>${itemsHtml}</div>
               ${generalReviewBtn}

@@ -138,9 +138,14 @@
                 <span id="admin-prod-count" style="font-size:0.85rem; color:#888; font-weight:600;">0 шт.</span>
               </div>
 
-              <button id="btn-open-add-product" class="btn btn-primary btn-sm">
-                + Добавить товар
-              </button>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="openTrashModal()">
+                  🗑 Корзина <span id="admin-trash-count" class="trash-count"></span>
+                </button>
+                <button id="btn-open-add-product" class="btn btn-primary btn-sm">
+                  + Добавить товар
+                </button>
+              </div>
             </div>
 
             <div class="admin-table-container">
@@ -171,11 +176,14 @@
               <div class="admin-table-controls">
                 <select id="admin-orders-status-filter" class="filter-select" onchange="loadOrdersTable()">
                   <option value="all">Все статусы</option>
-                  <option value="new">Новые</option>
-                  <option value="processing">В обработке</option>
-                  <option value="shipped">Отправлены</option>
-                  <option value="completed">Выполнены</option>
-                  <option value="cancelled">Отмененные</option>
+                  <option value="new">Ожидают оплаты</option>
+                  <option value="paid">Оплачены, в обработке</option>
+                  <option value="processing">Собираем</option>
+                  <option value="shipped">Переданы в доставку</option>
+                  <option value="ready_for_pickup">Ждут в пункте выдачи</option>
+                  <option value="delivered">Получены</option>
+                  <option value="returned">Возвраты</option>
+                  <option value="cancelled">Отменённые</option>
                 </select>
               </div>
             </div>
@@ -412,6 +420,10 @@
                   <label class="form-label">Код города отправки СДЭК (250 — Екатеринбург)</label>
                   <input type="number" id="setting-cdek-city" class="form-input" placeholder="250">
                 </div>
+                <div class="form-group">
+                  <label class="form-label">Код офиса СДЭК, куда вы сдаёте посылки (например, EKB5)</label>
+                  <input type="text" id="setting-cdek-shipment-point" class="form-input" placeholder="EKB5" autocomplete="off">
+                </div>
                 <div class="form-group" style="display:flex; align-items:center; gap:10px;">
                   <input type="checkbox" id="setting-cdek-test" style="width:18px; height:18px; cursor:pointer;" checked>
                   <label for="setting-cdek-test" style="cursor:pointer; font-weight:600; font-size:0.9rem;">Тестовая среда СДЭК (api.edu.cdek.ru)</label>
@@ -552,7 +564,7 @@
             </div>
 
             <div id="admin-image-previews" class="image-previews-list"></div>
-            <div style="font-size:0.75rem; color:#888; margin-top:-8px;">Стрелки меняют порядок, первое фото — главное в каталоге.</div>
+            <div style="font-size:0.75rem; color:#888; margin-top:-8px;">Перетащите фото мышкой или используйте стрелки, чтобы поменять порядок. Первое фото — главное в каталоге.</div>
           </div>
 
           <!-- Colour Variants Manager -->
@@ -610,6 +622,20 @@
   </div>
 
   <!-- Modal: Order Details -->
+  <!-- Modal: Trash (deleted products) -->
+  <div id="admin-trash-modal" class="admin-modal-backdrop">
+    <div class="admin-modal-card" style="max-width: 720px;">
+      <div class="admin-modal-header">
+        <h3>Корзина удалённых товаров</h3>
+        <button onclick="closeTrashModal()" style="background:none; border:none; font-size:1.6rem; cursor:pointer;">×</button>
+      </div>
+      <div class="admin-modal-body">
+        <p class="settings-hint">Удалённые товары хранятся здесь 30 дней, потом удаляются автоматически.</p>
+        <div id="admin-trash-list"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="admin-order-modal" class="admin-modal-backdrop">
     <div class="admin-modal-card">
       <div class="admin-modal-header">

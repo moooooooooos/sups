@@ -100,6 +100,7 @@ function showAdminDashboard(user) {
   bindNavigation();
   switchTab('products');
   loadStats();
+  updateTrashCount();
 }
 
 function bindNavigation() {
@@ -534,8 +535,8 @@ async function loadProductsTable() {
           <td>${formatCatLabel(p.category)}</td>
           <td>
             <div style="display: flex; align-items: center; gap: 4px;">
-              <input type="number" class="table-price-input" value="${p.price}" 
-                     onchange="updateInlinePrice(${p.id}, this.value)">
+              <input type="number" class="table-price-input" value="${p.price}" data-old="${p.price}"
+                     onchange="updateInlinePrice(${p.id}, this.value, this)">
               <span>₽</span>
             </div>
           </td>
@@ -558,7 +559,13 @@ async function loadProductsTable() {
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                 </svg>
               </button>
-              <button class="admin-btn-icon delete" title="Удалить" onclick="deleteProduct(${p.id}, '${escapeQuote(p.title)}')">
+              <button class="admin-btn-icon" title="Сделать копию (для комбо и вариаций)" onclick="duplicateProduct(${p.id}, '${escapeQuote(p.title)}')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+              <button class="admin-btn-icon delete" title="Удалить в корзину" onclick="deleteProduct(${p.id}, '${escapeQuote(p.title)}')">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="3 6 5 6 21 6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -576,7 +583,18 @@ async function loadProductsTable() {
   }
 }
 
-async function updateInlinePrice(productId, newPrice) {
+async function updateInlinePrice(productId, newPrice, inputEl) {
+  const oldPrice = inputEl ? inputEl.dataset.old : '';
+  const ok = await adminConfirm({
+    title: 'Изменить цену?',
+    text: `Новая цена: <b>${(parseFloat(newPrice) || 0).toLocaleString('ru-RU')} ₽</b>${oldPrice ? ` (было ${parseFloat(oldPrice).toLocaleString('ru-RU')} ₽)` : ''}. На сайте она изменится сразу.`,
+    confirmText: 'Сохранить цену'
+  });
+  if (!ok) {
+    if (inputEl) inputEl.value = oldPrice;
+    return;
+  }
+  if (inputEl) inputEl.dataset.old = newPrice;
   try {
     const res = await fetch(`/api/admin/products/${productId}/price`, {
       method: 'PATCH',
@@ -593,6 +611,12 @@ async function updateInlinePrice(productId, newPrice) {
 }
 
 async function toggleProductStock(productId, newStockStatus) {
+  const ok = await adminConfirm({
+    title: newStockStatus ? 'Вернуть товар в продажу?' : 'Снять товар с продажи?',
+    text: newStockStatus ? 'Товар снова можно будет купить.' : 'Товар останется в каталоге с пометкой «нет в наличии», купить его будет нельзя.',
+    confirmText: newStockStatus ? 'Вернуть в продажу' : 'Снять с продажи'
+  });
+  if (!ok) return;
   try {
     const res = await fetch(`/api/admin/products/${productId}/stock`, {
       method: 'PATCH',
@@ -609,7 +633,13 @@ async function toggleProductStock(productId, newStockStatus) {
 }
 
 async function deleteProduct(productId, title) {
-  if (!confirm(`Вы действительно хотите удалить товар "${title}"?`)) return;
+  const ok = await adminConfirm({
+    title: 'Удалить товар?',
+    text: `«${escapeHtml(title)}» пропадёт с сайта и попадёт в корзину. Восстановить его можно в течение 30 дней.`,
+    confirmText: 'Удалить в корзину',
+    danger: true
+  });
+  if (!ok) return;
 
   try {
     const res = await fetch(`/api/admin/products/${productId}`, {
@@ -619,12 +649,100 @@ async function deleteProduct(productId, title) {
     if (res.ok) {
       loadProductsTable();
       loadStats();
+      updateTrashCount();
     } else {
       throw new Error('Ошибка при удалении');
     }
   } catch (err) {
     alert(err.message);
   }
+}
+
+// Копия карточки: открывается сразу на редактирование
+async function duplicateProduct(productId, title) {
+  const ok = await adminConfirm({
+    title: 'Сделать копию товара?',
+    text: `Будет создана карточка «${escapeHtml(title)} (копия)» со всеми фото, размерами, цветами и описанием. Её можно сразу отредактировать.`,
+    confirmText: 'Сделать копию'
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/products/${productId}/duplicate`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Ошибка копирования');
+    await loadProductsTable();
+    if (!currentProducts.some(p => p.id === data.product.id)) currentProducts.unshift(data.product);
+    editProduct(data.product.id);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+/* ---------- Корзина удалённых товаров ---------- */
+async function updateTrashCount() {
+  const el = document.getElementById('admin-trash-count');
+  if (!el) return;
+  try {
+    const res = await fetch('/api/admin/products-trash', { headers: { 'Authorization': `Bearer ${adminToken}` } });
+    const data = await res.json();
+    const n = (data.items || []).length;
+    el.textContent = n ? String(n) : '';
+  } catch (e) {}
+}
+
+async function openTrashModal() {
+  const modal = document.getElementById('admin-trash-modal');
+  const list = document.getElementById('admin-trash-list');
+  list.innerHTML = '<div class="order-card-sub" style="padding:20px; text-align:center;">Загрузка…</div>';
+  modal.classList.add('open');
+  try {
+    const res = await fetch('/api/admin/products-trash', { headers: { 'Authorization': `Bearer ${adminToken}` } });
+    const data = await res.json();
+    const items = data.items || [];
+    list.innerHTML = items.length ? items.map(i => `
+      <div class="trash-row">
+        <img src="${escapeHtml(i.image || '/assets/placeholder.jpg')}" alt="">
+        <div class="trash-info">
+          <strong>${escapeHtml(i.title)}</strong>
+          <div class="order-card-sub">${i.price ? `${Math.round(i.price).toLocaleString('ru-RU')} ₽ · ` : ''}удалён ${formatDate(i.deleted_at)} · ID ${i.id}</div>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="restoreProduct(${i.id}, '${escapeQuote(i.title)}')">Восстановить</button>
+        <button type="button" class="btn btn-sm btn-danger-outline" onclick="purgeProduct(${i.id}, '${escapeQuote(i.title)}')">Удалить навсегда</button>
+      </div>
+    `).join('') : '<div class="order-card-sub" style="padding:20px; text-align:center;">Корзина пуста</div>';
+  } catch (e) {
+    list.innerHTML = '<div style="color:var(--admin-red); padding:20px;">Не удалось загрузить корзину</div>';
+  }
+}
+
+function closeTrashModal() {
+  document.getElementById('admin-trash-modal').classList.remove('open');
+}
+
+async function restoreProduct(id, title) {
+  const ok = await adminConfirm({ title: 'Восстановить товар?', text: `«${escapeHtml(title)}» снова появится в каталоге.`, confirmText: 'Восстановить' });
+  if (!ok) return;
+  const res = await fetch(`/api/admin/products-trash/${id}/restore`, { method: 'POST', headers: { 'Authorization': `Bearer ${adminToken}` } });
+  if (!res.ok) { alert('Не удалось восстановить товар'); return; }
+  openTrashModal();
+  loadProductsTable();
+  updateTrashCount();
+}
+
+async function purgeProduct(id, title) {
+  const ok = await adminConfirm({
+    title: 'Удалить навсегда?',
+    text: `«${escapeHtml(title)}» будет удалён без возможности восстановления.`,
+    confirmText: 'Удалить навсегда',
+    danger: true
+  });
+  if (!ok) return;
+  await fetch(`/api/admin/products-trash/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${adminToken}` } });
+  openTrashModal();
+  updateTrashCount();
 }
 
 /* ============================================================
@@ -763,7 +881,7 @@ function renderImagePreviews() {
       const colorId = uploadedImageColors[i] || '';
       const color = currentColors.find(c => c.id === colorId);
       return `
-        <div class="image-preview-card">
+        <div class="image-preview-card" draggable="true" data-index="${i}" title="Перетащите, чтобы поменять порядок">
           <div class="image-preview-item" style="${color ? `border-color:${escapeHtml(color.hex)}` : ''}">
             <img src="${escapeHtml(url)}">
             <button type="button" class="image-preview-remove" onclick="removeUploadedImage(${i})" title="Удалить фото">×</button>
@@ -782,8 +900,44 @@ function renderImagePreviews() {
         </div>
       `;
     }).join('');
+    bindPhotoDragAndDrop(container);
   }
   renderColorVariants();
+}
+
+// Перетаскивание фото: бросить на другое фото — встать на его место (цвет фото едет вместе с ним)
+function bindPhotoDragAndDrop(container) {
+  let from = null;
+  container.querySelectorAll('.image-preview-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      from = parseInt(card.dataset.index, 10);
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(from));
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      container.querySelectorAll('.drop-target').forEach(c => c.classList.remove('drop-target'));
+    });
+    card.addEventListener('dragover', e => {
+      if (from === null) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      card.classList.add('drop-target');
+    });
+    card.addEventListener('dragleave', () => card.classList.remove('drop-target'));
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      const to = parseInt(card.dataset.index, 10);
+      if (from === null || from === to) return;
+      const [img] = uploadedImages.splice(from, 1);
+      const [color] = uploadedImageColors.splice(from, 1);
+      uploadedImages.splice(to, 0, img);
+      uploadedImageColors.splice(to, 0, color);
+      from = null;
+      renderImagePreviews();
+    });
+  });
 }
 
 function removeUploadedImage(index) {
@@ -835,14 +989,14 @@ function updateColorVariant(colorId, field, value) {
   renderImagePreviews();
 }
 
-function removeColorVariant(colorId) {
+async function removeColorVariant(colorId) {
   const color = currentColors.find(c => c.id === colorId);
   if (!color) return;
   const count = uploadedImageColors.filter(id => id === colorId).length;
   const msg = count
     ? `Удалить цвет «${color.name}»? Его фото (${count}) останутся в альбоме без цвета.`
     : `Удалить цвет «${color.name}»?`;
-  if (!confirm(msg)) return;
+  if (!(await adminConfirm({ title: 'Удалить цвет?', text: escapeHtml(msg), confirmText: 'Удалить цвет', danger: true }))) return;
   currentColors = currentColors.filter(c => c.id !== colorId);
   uploadedImageColors = uploadedImageColors.map(id => (id === colorId ? '' : id));
   renderImagePreviews();
@@ -1084,7 +1238,7 @@ async function updateReviewStatus(reviewId, newStatus) {
 }
 
 async function deleteReview(reviewId, author) {
-  if (!confirm(`Удалить отзыв от "${author}"?`)) return;
+  if (!(await adminConfirm({ title: 'Удалить отзыв?', text: `Отзыв от «${escapeHtml(author)}» будет удалён без возможности восстановления.`, confirmText: 'Удалить', danger: true }))) return;
 
   try {
     const res = await fetch(`/api/reviews/admin/${reviewId}`, {
@@ -1204,6 +1358,69 @@ async function handleReviewFormSubmit(e) {
 /* ============================================================
    Orders Management & Detail Modal
    ============================================================ */
+/* ---------- Подтверждение действий (вместо системного confirm) ---------- */
+function adminConfirm({ title = 'Подтвердите действие', text = '', confirmText = 'Подтвердить', danger = false } = {}) {
+  return new Promise(resolve => {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'admin-modal-backdrop open confirm-backdrop';
+    backdrop.innerHTML = `
+      <div class="admin-modal-card confirm-card" role="dialog" aria-modal="true">
+        <h3>${escapeHtml(title)}</h3>
+        ${text ? `<p>${text}</p>` : ''}
+        <div class="confirm-actions">
+          <button type="button" class="btn btn-secondary btn-sm" data-answer="no">Отмена</button>
+          <button type="button" class="btn btn-sm ${danger ? 'btn-danger' : 'btn-primary'}" data-answer="yes">${escapeHtml(confirmText)}</button>
+        </div>
+      </div>
+    `;
+    const close = answer => {
+      document.removeEventListener('keydown', onKey);
+      backdrop.remove();
+      resolve(answer);
+    };
+    const onKey = e => {
+      if (e.key === 'Escape') close(false);
+      if (e.key === 'Enter') close(true);
+    };
+    backdrop.addEventListener('click', e => {
+      const btn = e.target.closest('[data-answer]');
+      if (btn) close(btn.dataset.answer === 'yes');
+      else if (e.target === backdrop) close(false);
+    });
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(backdrop);
+    backdrop.querySelector('[data-answer="yes"]').focus();
+  });
+}
+
+/* ---------- Заказы ---------- */
+const ORDER_STATUS_LABELS = {
+  new: 'Ожидает оплаты',
+  paid: 'Оплачен, в обработке',
+  processing: 'Собираем заказ',
+  shipped: 'Передан в доставку',
+  ready_for_pickup: 'Ждёт в пункте выдачи',
+  delivered: 'Получен',
+  completed: 'Получен',
+  returned: 'Возврат',
+  cancelled: 'Отменён'
+};
+const ORDER_STATUS_ORDER = ['new', 'paid', 'processing', 'shipped', 'ready_for_pickup', 'delivered', 'returned', 'cancelled'];
+
+function orderStatusBadge(status) {
+  return `<span class="order-badge order-badge-${escapeHtml(status || 'new')}">${escapeHtml(ORDER_STATUS_LABELS[status] || status)}</span>`;
+}
+
+function paymentBadge(o) {
+  if (o.payment_status === 'paid' || o.status === 'paid') return '<span class="pay-badge pay-ok">Оплачен</span>';
+  if (o.payment_status === 'canceled') return '<span class="pay-badge pay-fail">Оплата не прошла</span>';
+  return '<span class="pay-badge pay-wait">Ожидает оплаты</span>';
+}
+
+function rubles(value) {
+  return `${Math.round(Number(value) || 0).toLocaleString('ru-RU')} ₽`;
+}
+
 async function loadOrdersTable() {
   const tbody = document.getElementById('admin-orders-tbody');
   const statusFilter = document.getElementById('admin-orders-status-filter');
@@ -1226,34 +1443,27 @@ async function loadOrdersTable() {
 
     tbody.innerHTML = orders.map(o => `
       <tr>
-        <td><strong>#${o.order_number}</strong></td>
+        <td><strong>#${escapeHtml(o.order_number)}</strong></td>
         <td>${formatDate(o.created_at)}</td>
         <td>
-          <div><strong>${o.customer_name}</strong></div>
-          <div style="font-size:0.8rem; color:#888;">${o.customer_phone}</div>
-        </td>
-        <td>${o.delivery_method}</td>
-        <td>
-          <div><strong>${o.total_price.toLocaleString('ru-RU')} ₽</strong></div>
-          <div style="margin-top:4px;">
-            ${o.payment_status === 'paid' || o.status === 'paid'
-              ? '<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">Оплачен ✅</span>'
-              : '<span style="background:#fff8e1; color:#f57f17; padding:3px 8px; border-radius:10px; font-size:0.75rem; font-weight:600;">Ожидает оплаты</span>'}
-          </div>
+          <div><strong>${escapeHtml(o.customer_name)}</strong></div>
+          <div style="font-size:0.8rem; color:#888;">${escapeHtml(o.customer_phone)}</div>
         </td>
         <td>
-          <select class="filter-select" onchange="updateOrderStatus(${o.id}, this.value)" style="padding:4px 8px; font-size:0.8rem;">
-            <option value="new" ${o.status === 'new' ? 'selected' : ''}>Новый</option>
-            <option value="processing" ${o.status === 'processing' ? 'selected' : ''}>В обработке</option>
-            <option value="shipped" ${o.status === 'shipped' ? 'selected' : ''}>Отправлен</option>
-            <option value="completed" ${o.status === 'completed' ? 'selected' : ''}>Выполнен</option>
-            <option value="cancelled" ${o.status === 'cancelled' ? 'selected' : ''}>Отменен</option>
+          <div>${escapeHtml(o.delivery_method || '—')}</div>
+          ${o.tracking_number ? `<div style="font-size:0.75rem; color:#888;">Трек: ${escapeHtml(o.tracking_number)}</div>` : ''}
+        </td>
+        <td>
+          <div><strong>${rubles(o.total_price)}</strong></div>
+          <div style="margin-top:4px;">${paymentBadge(o)}</div>
+        </td>
+        <td>
+          <select class="filter-select order-status-select" data-current="${escapeHtml(o.status)}" onchange="updateOrderStatus(${o.id}, this.value, this)" style="padding:4px 8px; font-size:0.8rem;">
+            ${ORDER_STATUS_ORDER.map(s => `<option value="${s}" ${(o.status === s || (o.status === 'completed' && s === 'delivered')) ? 'selected' : ''}>${ORDER_STATUS_LABELS[s]}</option>`).join('')}
           </select>
         </td>
         <td>
-          <button class="btn btn-secondary btn-sm" onclick="viewOrderDetails(${o.id})">
-            Детали
-          </button>
+          <button class="btn btn-secondary btn-sm" onclick="viewOrderDetails(${o.id})">Открыть</button>
         </td>
       </tr>
     `).join('');
@@ -1263,7 +1473,18 @@ async function loadOrdersTable() {
   }
 }
 
-async function updateOrderStatus(orderId, newStatus) {
+async function updateOrderStatus(orderId, newStatus, selectEl) {
+  const previous = selectEl ? selectEl.dataset.current : null;
+  const ok = await adminConfirm({
+    title: 'Сменить статус заказа?',
+    text: `Новый статус: <b>${escapeHtml(ORDER_STATUS_LABELS[newStatus] || newStatus)}</b>. Покупатель увидит его в личном кабинете.`,
+    confirmText: 'Сменить статус',
+    danger: newStatus === 'cancelled'
+  });
+  if (!ok) {
+    if (selectEl && previous) selectEl.value = previous === 'completed' ? 'delivered' : previous;
+    return false;
+  }
   try {
     const res = await fetch(`/api/admin/orders/${orderId}/status`, {
       method: 'PUT',
@@ -1273,80 +1494,186 @@ async function updateOrderStatus(orderId, newStatus) {
       },
       body: JSON.stringify({ status: newStatus })
     });
-    if (res.ok) loadStats();
+    if (!res.ok) throw new Error();
+    if (selectEl) selectEl.dataset.current = newStatus;
+    loadStats();
+    return true;
   } catch (err) {
     alert('Ошибка обновления статуса');
+    if (selectEl && previous) selectEl.value = previous;
+    return false;
   }
 }
 
 async function viewOrderDetails(orderId) {
+  const modal = document.getElementById('admin-order-modal');
+  const contentEl = document.getElementById('admin-order-detail-content');
+  contentEl.innerHTML = '<div style="padding:30px; text-align:center; color:#888;">Загрузка заказа…</div>';
+  modal.classList.add('open');
+
   try {
-    const res = await fetch(`/api/admin/orders?limit=100`, {
+    const res = await fetch(`/api/admin/orders/${orderId}`, {
       headers: { 'Authorization': `Bearer ${adminToken}` }
     });
     const data = await res.json();
-    const order = (data.orders || []).find(o => o.id === orderId);
-    if (!order) return;
-
-    const modal = document.getElementById('admin-order-modal');
-    const contentEl = document.getElementById('admin-order-detail-content');
-
-    const items = Array.isArray(order.items) ? order.items : [];
-
-    contentEl.innerHTML = `
-      <div style="margin-bottom: 20px;">
-        <h3>Заказ #${order.order_number}</h3>
-        <div style="font-size: 0.85rem; color: #888;">Создан: ${formatDate(order.created_at)}</div>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
-        <div class="ui-card">
-          <strong>Информация о клиенте</strong>
-          <div style="margin-top: 8px; font-size: 0.9rem;">
-            <div>Имя: <b>${order.customer_name}</b></div>
-            <div>Телефон: <a href="tel:${order.customer_phone}">${order.customer_phone}</a></div>
-            ${order.customer_email ? `<div>Email: ${order.customer_email}</div>` : ''}
-          </div>
-        </div>
-        <div class="ui-card">
-          <strong>Доставка</strong>
-          <div style="margin-top: 8px; font-size: 0.9rem;">
-            <div>Способ: <b>${order.delivery_method}</b></div>
-            <div>Адрес / ПВЗ: ${order.delivery_address || 'Не указан'}</div>
-            ${order.comment ? `<div>Комментарий: <i>${order.comment}</i></div>` : ''}
-          </div>
-        </div>
-      </div>
-
-      <h4>Состав заказа:</h4>
-      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
-        ${items.map(item => `
-          <div style="display: flex; gap: 12px; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 12px;">
-            <img src="${item.image || '/assets/placeholder.jpg'}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;">
-            <div style="flex: 1;">
-              <strong>${item.title}</strong>
-              ${item.size ? `<div style="font-size: 0.85rem; color: #666;">Размер: ${item.size}</div>` : ''}
-              ${item.is_custom && item.custom_details ? `
-                <div style="font-size: 0.8rem; background: #f0f0f0; padding: 4px 8px; border-radius: 4px; margin-top: 4px;">
-                  ⚙️ Металл: ${item.custom_details.metal || '-'} | Текст: "${item.custom_details.text || '-'}" | Шрифт: ${item.custom_details.font || '-'}
-                </div>
-              ` : ''}
-            </div>
-            <div>
-              <b>${item.quantity} шт. × ${item.price} ₽</b>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-
-      <div style="margin-top: 20px; text-align: right; font-size: 1.2rem;">
-        Итого к оплате: <b>${order.total_price.toLocaleString('ru-RU')} ₽</b>
-      </div>
-    `;
-
-    modal.classList.add('open');
+    if (!res.ok) throw new Error(data.error || 'Ошибка загрузки');
+    renderOrderCard(data);
   } catch (e) {
-    console.error(e);
+    contentEl.innerHTML = `<div style="padding:30px; color:var(--admin-red);">Не удалось загрузить заказ: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function renderOrderCard({ order: o, history, customer }) {
+  const contentEl = document.getElementById('admin-order-detail-content');
+  const items = Array.isArray(o.items) ? o.items : [];
+  const itemsCount = items.reduce((n, i) => n + (parseInt(i.quantity, 10) || 1), 0);
+  const deliveryType = { pvz: 'Пункт выдачи / постамат', courier: 'Курьер до двери' }[o.delivery_type] || '';
+  const trackingUrl = o.tracking_number && o.delivery_provider === 'cdek'
+    ? `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(o.tracking_number)}` : '';
+  const canCreateShipment = o.delivery_provider === 'cdek' && !o.shipment_uuid && o.status !== 'cancelled';
+  const copyText = [
+    `Заказ ${o.order_number}`, o.customer_name, o.customer_phone, o.customer_email,
+    `${o.delivery_method || ''}: ${o.delivery_address || ''}`,
+    ...items.map(i => `${i.title}${i.size ? `, р. ${i.size}` : ''}${i.color ? `, ${i.color}` : ''} × ${i.quantity}`)
+  ].filter(Boolean).join('\n');
+
+  contentEl.innerHTML = `
+    <div class="order-card-head">
+      <div>
+        <h3>Заказ #${escapeHtml(o.order_number)}</h3>
+        <div class="order-card-sub">Создан ${formatDate(o.created_at)}${o.device ? ` · ${{ mobile: 'с телефона', tablet: 'с планшета', desktop: 'с компьютера' }[o.device] || ''}` : ''}</div>
+      </div>
+      <div class="order-card-badges">${orderStatusBadge(o.status)} ${paymentBadge(o)}</div>
+    </div>
+
+    <div class="order-timeline">
+      ${history.map(h => `
+        <div class="order-timeline-step">
+          <span class="order-timeline-dot"></span>
+          <div><b>${escapeHtml(h.label)}</b><div class="order-card-sub">${formatDate(h.created_at)}</div></div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="order-card-grid">
+      <div class="ui-card">
+        <strong>Покупатель</strong>
+        <div class="order-card-lines">
+          <div>${escapeHtml(o.customer_name)}</div>
+          <div><a href="tel:${escapeHtml(o.customer_phone)}">${escapeHtml(o.customer_phone)}</a></div>
+          ${o.customer_email ? `<div><a href="mailto:${escapeHtml(o.customer_email)}">${escapeHtml(o.customer_email)}</a></div>` : ''}
+          <div class="order-card-sub">Заказов у покупателя: ${customer.orders_count}${customer.paid_sum ? ` · оплачено всего ${rubles(customer.paid_sum)}` : ''}</div>
+          ${o.customer_id ? '<div class="order-card-sub">Есть личный кабинет</div>' : ''}
+        </div>
+      </div>
+
+      <div class="ui-card">
+        <strong>Доставка</strong>
+        <div class="order-card-lines">
+          <div><b>${escapeHtml(o.delivery_method || '—')}</b>${deliveryType ? ` · ${deliveryType}` : ''}</div>
+          <div>${escapeHtml(o.delivery_address || 'Адрес не указан')}</div>
+          ${o.delivery_point_id ? `<div class="order-card-sub">Код пункта: ${escapeHtml(o.delivery_point_id)}</div>` : ''}
+          ${o.tracking_number ? `<div>Трек-номер: <b>${escapeHtml(o.tracking_number)}</b>${trackingUrl ? ` · <a href="${trackingUrl}" target="_blank" rel="noopener">отследить</a>` : ''}</div>` : ''}
+          ${o.shipment_status ? `<div class="order-card-sub">Статус СДЭК: ${escapeHtml(o.shipment_status)}${o.shipment_synced_at ? ` (обновлён ${formatDate(o.shipment_synced_at)})` : ''}</div>` : ''}
+          ${o.shipment_error ? `<div class="order-card-error">Ошибка СДЭК: ${escapeHtml(o.shipment_error)}</div>` : ''}
+          <div class="order-card-actions">
+            ${canCreateShipment ? `<button type="button" class="btn btn-primary btn-sm" onclick="createOrderShipment(${o.id})">Передать в СДЭК</button>` : ''}
+            ${o.shipment_uuid ? `<button type="button" class="btn btn-secondary btn-sm" onclick="syncOrderShipment(${o.id})">Обновить статус из СДЭК</button>` : ''}
+          </div>
+          ${!o.delivery_provider ? '<div class="order-card-sub">Заказ оформлен без выбора перевозчика — отправление создаётся вручную.</div>' : ''}
+        </div>
+      </div>
+    </div>
+
+    ${o.comment ? `<div class="ui-card order-comment"><strong>Комментарий покупателя</strong><div>${escapeHtml(o.comment)}</div></div>` : ''}
+
+    <h4 style="margin: 20px 0 10px;">Состав заказа · ${itemsCount} шт.</h4>
+    <div class="order-items">
+      ${items.map(item => `
+        <div class="order-item">
+          <img src="${escapeHtml(item.image || '/assets/placeholder.jpg')}" alt="">
+          <div class="order-item-info">
+            <strong>${escapeHtml(item.title)}</strong>
+            <div class="order-card-sub">
+              ${[item.size ? `Размер: ${escapeHtml(item.size)}` : '', item.color ? `Цвет: ${escapeHtml(item.color)}` : '', item.id && !item.is_custom ? `ID ${escapeHtml(item.id)}` : ''].filter(Boolean).join(' · ')}
+            </div>
+            ${item.is_custom && item.custom_details ? `
+              <div class="order-item-custom">⚙️ Металл: ${escapeHtml(item.custom_details.metal || '-')} · Текст: «${escapeHtml(item.custom_details.text || '-')}» · Шрифт: ${escapeHtml(item.custom_details.font || '-')}</div>
+            ` : ''}
+          </div>
+          <div class="order-item-price">${item.quantity} × ${rubles(item.price)}<br><b>${rubles(item.price * item.quantity)}</b></div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="order-totals">
+      <div><span>Товары</span><span>${rubles(o.subtotal)}</span></div>
+      ${o.discount_amount ? `<div><span>Скидка</span><span>−${rubles(o.discount_amount)}</span></div>` : ''}
+      ${o.bonus_used ? `<div><span>Оплачено бонусами</span><span>−${rubles(o.bonus_used)}</span></div>` : ''}
+      ${o.promo_code ? `<div><span>Промокод</span><span>${escapeHtml(o.promo_code)}</span></div>` : ''}
+      <div><span>Доставка</span><span>${o.delivery_price ? rubles(o.delivery_price) : 'бесплатно'}</span></div>
+      <div class="order-totals-total"><span>Итого</span><span>${rubles(o.total_price)}</span></div>
+      <div class="order-card-sub">${o.paid_at ? `Оплачен ${formatDate(o.paid_at)}` : 'Оплата не поступала'}${o.payment_id ? ` · платёж ${escapeHtml(o.payment_id)}` : ''}</div>
+    </div>
+
+    <div class="order-card-actions" style="margin-top:16px;">
+      <button type="button" class="btn btn-secondary btn-sm" id="order-copy-btn">Скопировать данные</button>
+      ${o.status !== 'cancelled' ? `<button type="button" class="btn btn-sm btn-danger-outline" onclick="cancelOrderFromCard(${o.id})">Отменить заказ</button>` : ''}
+    </div>
+    ${o.pd_consent_at ? `<div class="order-card-sub" style="margin-top:10px;">Согласие на обработку ПД: ${formatDate(o.pd_consent_at)}</div>` : ''}
+  `;
+
+  document.getElementById('order-copy-btn').addEventListener('click', async e => {
+    try {
+      await navigator.clipboard.writeText(copyText);
+      e.target.textContent = 'Скопировано';
+    } catch (err) {
+      e.target.textContent = 'Не удалось скопировать';
+    }
+  });
+}
+
+async function createOrderShipment(orderId) {
+  const ok = await adminConfirm({
+    title: 'Передать заказ в СДЭК?',
+    text: 'В СДЭК будет создано отправление с данными покупателя и составом заказа. После этого статус доставки будет обновляться автоматически.',
+    confirmText: 'Создать отправление'
+  });
+  if (!ok) return;
+  try {
+    const res = await fetch(`/api/admin/orders/${orderId}/shipment`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    setTimeout(() => viewOrderDetails(orderId), 5000);
+    viewOrderDetails(orderId);
+    loadOrdersTable();
+  } catch (e) {
+    alert(`Не удалось создать отправление: ${e.message}`);
+  }
+}
+
+async function syncOrderShipment(orderId) {
+  try {
+    const res = await fetch(`/api/admin/orders/${orderId}/sync`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${adminToken}` }
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    viewOrderDetails(orderId);
+    loadOrdersTable();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function cancelOrderFromCard(orderId) {
+  if (await updateOrderStatus(orderId, 'cancelled')) {
+    viewOrderDetails(orderId);
+    loadOrdersTable();
   }
 }
 
@@ -1392,6 +1719,7 @@ async function loadSettings() {
     setVal('setting-cdek-id', s.cdek_client_id || '');
     setVal('setting-cdek-secret', s.cdek_client_secret || '');
     setVal('setting-cdek-city', s.cdek_sender_city_code || '250');
+    setVal('setting-cdek-shipment-point', s.cdek_shipment_point || '');
     setVal('setting-ya-token', s.yandex_delivery_token || '');
     setVal('setting-ya-station', s.yandex_delivery_station_id || '');
     setVal('setting-dadata-key', s.dadata_api_key || '');
@@ -1425,6 +1753,7 @@ async function handleSettingsSubmit(e) {
     cdek_client_id: 'setting-cdek-id',
     cdek_client_secret: 'setting-cdek-secret',
     cdek_sender_city_code: 'setting-cdek-city',
+    cdek_shipment_point: 'setting-cdek-shipment-point',
     yandex_delivery_token: 'setting-ya-token',
     yandex_delivery_station_id: 'setting-ya-station',
     dadata_api_key: 'setting-dadata-key'
@@ -1530,6 +1859,13 @@ async function editCustomerBonuses(customerId, name, currentBonuses, currentDisc
 
   const newDiscount = prompt(`Изменить персональную скидку (%) для ${name}:`, currentDiscount);
   if (newDiscount === null) return;
+
+  const confirmed = await adminConfirm({
+    title: 'Сохранить изменения покупателя?',
+    text: `${escapeHtml(name)}: бонусы ${escapeHtml(currentBonuses)} → <b>${escapeHtml(newBonuses)}</b>, скидка ${escapeHtml(currentDiscount)}% → <b>${escapeHtml(newDiscount)}%</b>.`,
+    confirmText: 'Сохранить'
+  });
+  if (!confirmed) return;
 
   try {
     const res = await fetch(`/api/admin/customers/${customerId}`, {
@@ -1674,7 +2010,7 @@ async function handlePromoFormSubmit(e) {
 }
 
 async function deletePromoCode(id, code) {
-  if (!confirm(`Удалить промокод "${code}"?`)) return;
+  if (!(await adminConfirm({ title: 'Удалить промокод?', text: `Промокод «${escapeHtml(code)}» перестанет работать.`, confirmText: 'Удалить', danger: true }))) return;
 
   try {
     const res = await fetch(`/api/admin/promo-codes/${id}`, {

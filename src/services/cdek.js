@@ -144,6 +144,8 @@ async function calcTariff(cityCode, tariffCode, parcel) {
 
 module.exports = {
   isConfigured,
+  config,
+  request,
   suggestCities,
   listPoints,
   getPoint,

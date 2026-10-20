@@ -1006,3 +1006,266 @@ body.admin-body {
   margin: 18px 0 10px;
   font-size: 0.9rem;
 }
+
+/* ============================================================
+   Confirm dialog, order card, status badges
+   ============================================================ */
+.confirm-backdrop {
+  z-index: 2000;
+}
+
+.confirm-card {
+  max-width: 420px;
+  padding: 24px;
+}
+
+.confirm-card h3 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+}
+
+.confirm-card p {
+  margin: 0 0 18px;
+  color: #555;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-danger {
+  background: var(--admin-red);
+  border-color: var(--admin-red);
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+.btn-danger-outline {
+  background: #fff;
+  color: var(--admin-red);
+  border: 1px solid #fecaca;
+}
+
+.order-badge,
+.pay-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.order-badge-new { background: #eef2ff; color: #4338ca; }
+.order-badge-paid { background: #e0f2fe; color: #0369a1; }
+.order-badge-processing { background: #fff7ed; color: #c2410c; }
+.order-badge-shipped { background: #f3e8ff; color: #7e22ce; }
+.order-badge-ready_for_pickup { background: #fef9c3; color: #a16207; }
+.order-badge-delivered,
+.order-badge-completed { background: #dcfce7; color: #15803d; }
+.order-badge-returned,
+.order-badge-cancelled { background: #fee2e2; color: #b91c1c; }
+
+.pay-ok { background: #dcfce7; color: #15803d; }
+.pay-wait { background: #fef3c7; color: #b45309; }
+.pay-fail { background: #fee2e2; color: #b91c1c; }
+
+.order-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.order-card-head h3 {
+  margin: 0;
+}
+
+.order-card-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.order-card-sub {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.order-timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  padding: 12px 14px;
+  background: #f8f9fb;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  font-size: 0.85rem;
+}
+
+.order-timeline-step {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.order-timeline-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: #111;
+  flex-shrink: 0;
+}
+
+.order-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.order-card-lines {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-card-error {
+  color: var(--admin-red);
+  font-size: 0.8rem;
+}
+
+.order-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.order-comment {
+  margin-top: 14px;
+  font-size: 0.9rem;
+}
+
+.order-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.order-item {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.order-item img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.order-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.order-item-custom {
+  font-size: 0.8rem;
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.order-item-price {
+  text-align: right;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.order-totals {
+  margin-left: auto;
+  margin-top: 14px;
+  max-width: 320px;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.order-totals > div:not(.order-card-sub) {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.order-totals-total {
+  font-size: 1.1rem;
+  font-weight: 800;
+  border-top: 1px solid #eee;
+  padding-top: 6px;
+  margin-top: 4px;
+}
+
+/* Photo drag & drop, trash */
+.image-preview-card {
+  cursor: grab;
+}
+
+.image-preview-card.dragging {
+  opacity: 0.4;
+}
+
+.image-preview-card.drop-target .image-preview-item {
+  outline: 2px dashed #000;
+  outline-offset: 2px;
+}
+
+.trash-count:not(:empty) {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 5px;
+  margin-left: 4px;
+  border-radius: 9px;
+  background: #111;
+  color: #fff;
+  font-size: 0.7rem;
+  line-height: 18px;
+  text-align: center;
+}
+
+.trash-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  flex-wrap: wrap;
+}
+
+.trash-row img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.trash-info {
+  flex: 1;
+  min-width: 180px;
+}

@@ -4,6 +4,11 @@ const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { requireAdmin } = require('./auth');
 const upload = require('../services/uploader');
+const orderStatus = require('../services/orderStatus');
+const cdekShipments = require('../services/cdekShipments');
+
+// Статусы отправлений СДЭК подтягиваются в фоне раз в 30 минут
+cdekShipments.startAutoSync();
 
 // Protect all admin endpoints
 router.use(requireAdmin);
@@ -335,14 +340,100 @@ router.patch('/products/:id/stock', (req, res) => {
   }
 });
 
-// DELETE /api/admin/products/:id - Delete product
+// Колонки таблицы products (для копирования и восстановления строк целиком)
+function productColumns() {
+  return db.prepare('PRAGMA table_info(products)').all().map(c => c.name);
+}
+
+function insertProductRow(row) {
+  const cols = productColumns().filter(c => Object.prototype.hasOwnProperty.call(row, c));
+  const stmt = db.prepare(`INSERT INTO products (${cols.join(', ')}) VALUES (${cols.map(c => `@${c}`).join(', ')})`);
+  return stmt.run(Object.fromEntries(cols.map(c => [c, row[c]])));
+}
+
+// Корзина хранит товары 30 дней, потом удаляет окончательно
+function purgeTrash() {
+  db.prepare("DELETE FROM products_trash WHERE deleted_at < datetime('now', '-30 days')").run();
+}
+
+// DELETE /api/admin/products/:id - Move product to trash (можно восстановить 30 дней)
 router.delete('/products/:id', (req, res) => {
   try {
-    const id = req.params.id;
-    db.prepare('DELETE FROM products WHERE id = ?').run(id);
-    res.json({ success: true, message: 'Товар успешно удален' });
+    const row = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Товар не найден' });
+    db.transaction(() => {
+      db.prepare('INSERT OR REPLACE INTO products_trash (id, title, data) VALUES (?, ?, ?)').run(row.id, row.title, JSON.stringify(row));
+      db.prepare('DELETE FROM products WHERE id = ?').run(row.id);
+    })();
+    purgeTrash();
+    res.json({ success: true, message: 'Товар перемещён в корзину' });
   } catch (err) {
+    console.error('Error moving product to trash:', err);
     res.status(500).json({ error: 'Ошибка при удалении товара' });
+  }
+});
+
+// GET /api/admin/products-trash - Deleted products
+router.get('/products-trash', (req, res) => {
+  try {
+    purgeTrash();
+    const rows = db.prepare('SELECT id, title, data, deleted_at FROM products_trash ORDER BY deleted_at DESC').all();
+    res.json({
+      items: rows.map(r => {
+        const p = JSON.parse(r.data || '{}');
+        const images = typeof p.images === 'string' ? JSON.parse(p.images || '[]') : (p.images || []);
+        return { id: r.id, title: r.title, price: p.price, category: p.category, image: images[0] || '', deleted_at: r.deleted_at };
+      })
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка загрузки корзины' });
+  }
+});
+
+// POST /api/admin/products-trash/:id/restore - Restore product with the same id
+router.post('/products-trash/:id/restore', (req, res) => {
+  try {
+    const row = db.prepare('SELECT * FROM products_trash WHERE id = ?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Товара нет в корзине' });
+    const data = JSON.parse(row.data);
+    if (db.prepare('SELECT id FROM products WHERE id = ?').get(data.id)) delete data.id;
+    if (data.uid && db.prepare('SELECT id FROM products WHERE uid = ?').get(data.uid)) data.uid = null;
+    db.transaction(() => {
+      insertProductRow(data);
+      db.prepare('DELETE FROM products_trash WHERE id = ?').run(row.id);
+    })();
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error restoring product:', err);
+    res.status(500).json({ error: 'Не удалось восстановить товар' });
+  }
+});
+
+// DELETE /api/admin/products-trash/:id - Delete permanently
+router.delete('/products-trash/:id', (req, res) => {
+  try {
+    db.prepare('DELETE FROM products_trash WHERE id = ?').run(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка удаления' });
+  }
+});
+
+// POST /api/admin/products/:id/duplicate - Copy product card (для новых комбо и вариаций)
+router.post('/products/:id/duplicate', (req, res) => {
+  try {
+    const row = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Товар не найден' });
+    const copy = { ...row, title: `${row.title} (копия)`, sku: '', uid: null, is_bestseller: 0 };
+    delete copy.id;
+    delete copy.created_at;
+    delete copy.updated_at;
+    const result = insertProductRow(copy);
+    const product = parseProduct(db.prepare('SELECT * FROM products WHERE id = ?').get(result.lastInsertRowid));
+    res.status(201).json({ success: true, product });
+  } catch (err) {
+    console.error('Error duplicating product:', err);
+    res.status(500).json({ error: 'Не удалось скопировать товар' });
   }
 });
 
@@ -425,8 +516,7 @@ router.put('/orders/:id/status', (req, res) => {
     const id = req.params.id;
     const { status } = req.body;
 
-    const validStatuses = ['new', 'processing', 'shipped', 'completed', 'cancelled'];
-    if (!validStatuses.includes(status)) {
+    if (!orderStatus.isValid(status) || status === 'completed') {
       return res.status(400).json({ error: 'Недопустимый статус заказа' });
     }
 
@@ -437,9 +527,65 @@ router.put('/orders/:id/status', (req, res) => {
       WHERE id = ?
     `).run(status, id);
 
+    // Ручная отметка «Оплачен» (например, перевод на карту) фиксирует и саму оплату
+    if (status === 'paid') {
+      db.prepare(`
+        UPDATE orders SET payment_status = 'paid', paid_at = COALESCE(paid_at, datetime('now'))
+        WHERE id = ? AND COALESCE(payment_status, '') != 'paid'
+      `).run(id);
+    }
+
     res.json({ success: true, id, status });
   } catch (err) {
     res.status(500).json({ error: 'Ошибка при обновлении статуса заказа' });
+  }
+});
+
+// GET /api/admin/orders/:id - Full order card: history, shipment, customer stats
+router.get('/orders/:id', (req, res) => {
+  try {
+    const o = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+    if (!o) return res.status(404).json({ error: 'Заказ не найден' });
+    const history = db.prepare('SELECT status, created_at FROM order_status_history WHERE order_id = ? ORDER BY id').all(o.id);
+    const phoneDigits = String(o.customer_phone || '').replace(/\D/g, '').slice(-10);
+    const customerOrders = db.prepare(`
+      SELECT COUNT(*) AS c, COALESCE(SUM(CASE WHEN payment_status = 'paid' THEN total_price END), 0) AS paid_sum
+      FROM orders
+      WHERE (customer_email != '' AND lower(customer_email) = lower(?))
+         OR (? != '' AND substr(replace(replace(replace(replace(replace(customer_phone, '+', ''), ' ', ''), '(', ''), ')', ''), '-', ''), -10) = ?)
+    `).get(o.customer_email || '', phoneDigits, phoneDigits);
+    res.json({
+      order: { ...o, items: JSON.parse(o.items || '[]'), status_label: orderStatus.label(o.status) },
+      history: history.map(h => ({ ...h, label: orderStatus.label(h.status) })),
+      customer: { orders_count: customerOrders.c, paid_sum: customerOrders.paid_sum },
+      statuses: Object.entries(orderStatus.STATUSES)
+        .filter(([key]) => key !== 'completed')
+        .map(([key, s]) => ({ key, label: s.label }))
+    });
+  } catch (err) {
+    console.error('Error fetching order card:', err);
+    res.status(500).json({ error: 'Ошибка загрузки заказа' });
+  }
+});
+
+// POST /api/admin/orders/:id/shipment - Create CDEK shipment for the order
+router.post('/orders/:id/shipment', async (req, res) => {
+  try {
+    const result = await cdekShipments.createShipment(parseInt(req.params.id, 10));
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.warn('Create shipment error:', err.message);
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/orders/:id/sync - Refresh shipment status from CDEK now
+router.post('/orders/:id/sync', async (req, res) => {
+  try {
+    const result = await cdekShipments.syncShipment(parseInt(req.params.id, 10));
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(502).json({ error: `СДЭК не ответил: ${err.message}` });
   }
 });
 

@@ -3,6 +3,8 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
+const orderStatus = require('../services/orderStatus');
+const cdekShipments = require('../services/cdekShipments');
 
 const CUSTOMER_JWT_SECRET = process.env.CUSTOMER_JWT_SECRET || 'sups_customer_secret_key_2026';
 
@@ -207,10 +209,36 @@ router.get('/orders', requireCustomer, (req, res) => {
       ORDER BY id DESC
     `).all(req.customer.id, req.customer.email, req.customer.phone || 'NO_PHONE');
 
+    const historyStmt = db.prepare('SELECT status, created_at FROM order_status_history WHERE order_id = ? ORDER BY id');
     const orders = rows.map(o => ({
-      ...o,
-      items: JSON.parse(o.items || '[]')
+      id: o.id,
+      order_number: o.order_number,
+      created_at: o.created_at,
+      items: JSON.parse(o.items || '[]'),
+      subtotal: o.subtotal,
+      discount_amount: o.discount_amount,
+      bonus_used: o.bonus_used,
+      delivery_price: o.delivery_price,
+      total_price: o.total_price,
+      status: o.status,
+      status_label: orderStatus.label(o.status),
+      payment_status: o.payment_status,
+      paid_at: o.paid_at,
+      delivery_method: o.delivery_method,
+      delivery_address: o.delivery_address,
+      delivery_type: o.delivery_type,
+      tracking_number: o.tracking_number,
+      tracking_url: o.tracking_number && o.delivery_provider === 'cdek'
+        ? `https://www.cdek.ru/ru/tracking?order_id=${encodeURIComponent(o.tracking_number)}`
+        : null,
+      shipment_status: o.shipment_status,
+      history: historyStmt.all(o.id).map(h => ({ ...h, label: orderStatus.label(h.status) }))
     }));
+
+    // Статусы доставки, которые давно не обновлялись, подтягиваем из СДЭК в фоне
+    rows.filter(o => o.shipment_uuid && !['delivered', 'completed', 'cancelled', 'returned'].includes(o.status))
+      .filter(o => !o.shipment_synced_at || Date.now() - Date.parse(`${o.shipment_synced_at.replace(' ', 'T')}Z`) > 15 * 60 * 1000)
+      .forEach(o => cdekShipments.syncShipment(o.id).catch(err => console.warn('CDEK sync (account):', err.message)));
 
     res.json({ orders });
   } catch (err) {
