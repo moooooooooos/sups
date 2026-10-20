@@ -584,6 +584,17 @@
             <input type="file" id="admin-color-photo-input" multiple accept="image/*" style="display:none;">
           </div>
 
+          <!-- «Может понравиться» -->
+          <div class="form-group">
+            <label class="form-label">Может понравиться</label>
+            <div class="settings-hint">Эти украшения покупатель увидит в карточке товара. Если выбрать меньше 6, остальные подберутся автоматически из той же коллекции и категории.</div>
+            <div class="related-search">
+              <input type="text" id="admin-related-search" class="form-input" placeholder="Найти украшение по названию или SKU…" autocomplete="off">
+              <ul id="admin-related-results" class="related-results" hidden></ul>
+            </div>
+            <div id="admin-related-list" class="related-list"></div>
+          </div>
+
           <!-- Sizes Manager -->
           <div class="form-group">
             <label class="form-label">Размеры в наличии</label>

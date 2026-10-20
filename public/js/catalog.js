@@ -827,6 +827,7 @@ async function openProductModal(productId) {
     modalQuantity = 1;
 
     if (window.supsAnalytics) window.supsAnalytics.track('product_view', { product_id: currentModalProduct.id });
+    renderModalRelated(Array.isArray(data.related) ? data.related : []);
 
     // Reset qty
     const qtyInput = document.getElementById('modal-qty-val');
@@ -1008,6 +1009,44 @@ function selectModalColor(colorId, btnEl) {
   if (btnEl) btnEl.classList.add('active');
   updateModalColorName();
   renderModalGallery(getModalImages());
+}
+
+// «Может понравиться»: подборка из админки + автоподбор с сервера; клик открывает другой товар в той же карточке
+function renderModalRelated(related) {
+  const desc = document.getElementById('modal-product-desc');
+  if (!desc) return;
+  let block = document.getElementById('modal-related');
+  if (!block) {
+    block = document.createElement('div');
+    block.id = 'modal-related';
+    block.className = 'modal-related';
+    desc.insertAdjacentElement('afterend', block);
+  }
+  if (!related.length) {
+    block.hidden = true;
+    block.innerHTML = '';
+    return;
+  }
+  block.hidden = false;
+  block.innerHTML = `
+    <h4 class="modal-related-title">Может понравиться</h4>
+    <div class="modal-related-list">
+      ${related.map(p => `
+        <button type="button" class="modal-related-card" data-id="${escapeAttr(p.id)}">
+          <img src="${escapeAttr(p.image || 'assets/placeholder.jpg')}" alt="${escapeAttr(p.title)}" loading="lazy">
+          <span class="modal-related-name">${escapeAttr(p.title)}</span>
+          <span class="modal-related-price">${Math.round(p.price).toLocaleString('ru-RU')} ₽${p.price_old ? ` <s>${Math.round(p.price_old).toLocaleString('ru-RU')} ₽</s>` : ''}</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
+  block.querySelectorAll('.modal-related-card').forEach(card => {
+    card.addEventListener('click', async () => {
+      await openProductModal(card.dataset.id);
+      const scroller = document.querySelector('#product-modal-backdrop .product-modal-container');
+      if (scroller) scroller.scrollTop = 0;
+    });
+  });
 }
 
 function switchModalImage(src, thumbEl) {

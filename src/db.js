@@ -180,6 +180,9 @@ db.exec(`
   WHERE NOT EXISTS (SELECT 1 FROM order_status_history h WHERE h.order_id = o.id);
 `);
 
+// «Может понравиться»: id товаров, выбранных вручную в админке (JSON-массив)
+try { db.exec("ALTER TABLE products ADD COLUMN related_ids TEXT DEFAULT '[]';"); } catch (e) {}
+
 // Корзина удалённых товаров: строка товара целиком, восстановление с тем же id
 db.exec(`
   CREATE TABLE IF NOT EXISTS products_trash (

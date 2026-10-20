@@ -784,6 +784,8 @@ function openAddProductModal() {
   uploadedImageColors = [];
   currentColors = [];
   currentSizes = ['16', '17', '18', '19', '20', '21'];
+  currentRelatedIds = [];
+  briefProducts = null; // список для поиска перечитываем при каждом открытии формы
 
   document.getElementById('admin-modal-title').textContent = 'Добавить новый товар';
   document.getElementById('prod-form-title').value = '';
@@ -799,6 +801,7 @@ function openAddProductModal() {
   calcDiscountBadge();
   renderImagePreviews();
   renderSizesTags();
+  renderRelated();
 
   document.getElementById('admin-product-modal-backdrop').classList.add('open');
 }
@@ -810,6 +813,8 @@ function editProduct(productId) {
   editingProductId = productId;
   uploadedImages = Array.isArray(prod.images) ? [...prod.images] : [];
   currentSizes = Array.isArray(prod.sizes) ? [...prod.sizes] : [];
+  currentRelatedIds = Array.isArray(prod.related_ids) ? [...prod.related_ids] : [];
+  briefProducts = null;
 
   // color_variants[].images — индексы фото; раскладываем их по фото
   uploadedImageColors = uploadedImages.map(() => '');
@@ -839,6 +844,7 @@ function editProduct(productId) {
   calcDiscountBadge();
   renderImagePreviews();
   renderSizesTags();
+  renderRelated();
 
   document.getElementById('admin-product-modal-backdrop').classList.add('open');
 }
@@ -957,6 +963,88 @@ function moveUploadedImage(index, delta) {
 function setImageColor(index, colorId) {
   uploadedImageColors[index] = colorId || '';
   renderImagePreviews();
+}
+
+/* ---------- «Может понравиться» ---------- */
+let currentRelatedIds = [];
+let briefProducts = null;
+
+async function loadBriefProducts() {
+  if (briefProducts) return briefProducts;
+  const res = await fetch('/api/admin/products-brief', { headers: { 'Authorization': `Bearer ${adminToken}` } });
+  const data = await res.json();
+  briefProducts = data.products || [];
+  return briefProducts;
+}
+
+async function renderRelated() {
+  const list = document.getElementById('admin-related-list');
+  if (!list) return;
+  bindRelatedSearch();
+  const all = await loadBriefProducts().catch(() => []);
+  const byId = new Map(all.map(p => [p.id, p]));
+  const items = currentRelatedIds.map(id => byId.get(id)).filter(Boolean);
+  list.innerHTML = items.length ? items.map((p, i) => `
+    <div class="related-item">
+      <img src="${escapeHtml(p.image || '/assets/placeholder.jpg')}" alt="">
+      <div class="related-info">
+        <strong>${escapeHtml(p.title)}</strong>
+        <span>${Math.round(p.price).toLocaleString('ru-RU')} ₽${p.in_stock ? '' : ' · нет в наличии, на сайте не покажется'}</span>
+      </div>
+      <button type="button" onclick="moveRelated(${i}, -1)" ${i === 0 ? 'disabled' : ''} title="Выше">↑</button>
+      <button type="button" onclick="moveRelated(${i}, 1)" ${i === items.length - 1 ? 'disabled' : ''} title="Ниже">↓</button>
+      <button type="button" class="related-remove" onclick="removeRelated(${p.id})" title="Убрать">×</button>
+    </div>
+  `).join('') : '<div class="settings-hint" style="margin:8px 0 0;">Пока не выбрано — на сайте покажутся товары, подобранные автоматически.</div>';
+}
+
+function bindRelatedSearch() {
+  const input = document.getElementById('admin-related-search');
+  const results = document.getElementById('admin-related-results');
+  if (!input || input.dataset.bound) return;
+  input.dataset.bound = '1';
+
+  input.addEventListener('input', async () => {
+    const q = input.value.trim().toLowerCase();
+    if (q.length < 2) { results.hidden = true; return; }
+    const all = await loadBriefProducts();
+    const found = all
+      .filter(p => p.id !== editingProductId && !currentRelatedIds.includes(p.id))
+      .filter(p => `${p.title} ${p.sku || ''}`.toLowerCase().includes(q))
+      .slice(0, 8);
+    results.innerHTML = found.length ? found.map(p => `
+      <li data-id="${p.id}">
+        <img src="${escapeHtml(p.image || '/assets/placeholder.jpg')}" alt="">
+        <span>${escapeHtml(p.title)}</span>
+        <small>${Math.round(p.price).toLocaleString('ru-RU')} ₽</small>
+      </li>
+    `).join('') : '<li class="related-empty">Ничего не найдено</li>';
+    results.hidden = false;
+  });
+
+  results.addEventListener('mousedown', e => {
+    const li = e.target.closest('li[data-id]');
+    if (!li) return;
+    e.preventDefault();
+    if (currentRelatedIds.length >= 12) { alert('Можно выбрать до 12 украшений'); return; }
+    currentRelatedIds.push(parseInt(li.dataset.id, 10));
+    input.value = '';
+    results.hidden = true;
+    renderRelated();
+  });
+  input.addEventListener('blur', () => setTimeout(() => { results.hidden = true; }, 150));
+}
+
+function moveRelated(index, delta) {
+  const to = index + delta;
+  if (to < 0 || to >= currentRelatedIds.length) return;
+  [currentRelatedIds[index], currentRelatedIds[to]] = [currentRelatedIds[to], currentRelatedIds[index]];
+  renderRelated();
+}
+
+function removeRelated(id) {
+  currentRelatedIds = currentRelatedIds.filter(x => x !== id);
+  renderRelated();
 }
 
 /* ---------- Colour variants ---------- */
@@ -1110,6 +1198,7 @@ async function handleProductFormSubmit(e) {
     description,
     images: uploadedImages,
     color_variants: buildColorVariantsPayload(),
+    related_ids: currentRelatedIds,
     sizes: currentSizes,
     in_stock,
     is_bestseller

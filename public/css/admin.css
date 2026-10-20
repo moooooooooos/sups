@@ -1269,3 +1269,113 @@ body.admin-body {
   flex: 1;
   min-width: 180px;
 }
+
+/* «Может понравиться» */
+.related-search {
+  position: relative;
+}
+
+.related-results {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.related-results li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.related-results li:hover {
+  background: #f3f4f6;
+}
+
+.related-results li span {
+  flex: 1;
+}
+
+.related-results li small {
+  color: #888;
+}
+
+.related-results img,
+.related-item img {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.related-results .related-empty {
+  color: #999;
+  cursor: default;
+}
+
+.related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.related-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+}
+
+.related-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+
+.related-info span {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.related-item button {
+  border: 1px solid var(--admin-border);
+  background: #fff;
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+}
+
+.related-item button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.related-item .related-remove {
+  color: #888;
+  font-size: 1rem;
+}
+
+.related-search .form-input {
+  width: 100%;
+  box-sizing: border-box;
+}

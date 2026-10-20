@@ -11,8 +11,64 @@ function parseProduct(p) {
     images: typeof p.images === 'string' ? JSON.parse(p.images || '[]') : p.images,
     sizes: typeof p.sizes === 'string' ? JSON.parse(p.sizes || '[]') : p.sizes,
     color_variants: typeof p.color_variants === 'string' ? JSON.parse(p.color_variants || '[]') : (p.color_variants || []),
+    related_ids: typeof p.related_ids === 'string' ? JSON.parse(p.related_ids || '[]') : (p.related_ids || []),
     characteristics: typeof p.characteristics === 'string' ? JSON.parse(p.characteristics || '[]') : p.characteristics
   };
+}
+
+const RELATED_LIMIT = 6;
+
+/**
+ * «Может понравиться»: сначала товары, выбранные в админке (в их порядке),
+ * затем автоподбор — та же коллекция, та же категория, хиты. Товары в наличии раньше.
+ */
+function relatedProducts(product) {
+  const picked = [];
+  const seen = new Set([product.id]);
+  const add = rows => rows.forEach(r => {
+    if (picked.length < RELATED_LIMIT && !seen.has(r.id)) {
+      seen.add(r.id);
+      picked.push(r);
+    }
+  });
+
+  const manualIds = Array.isArray(product.related_ids) ? product.related_ids : [];
+  if (manualIds.length) {
+    const rows = db.prepare(`SELECT * FROM products WHERE id IN (${manualIds.map(() => '?').join(',')})`).all(...manualIds);
+    const byId = new Map(rows.map(r => [r.id, r]));
+    add(manualIds.map(id => byId.get(id)).filter(r => r && r.in_stock));
+  }
+
+  const collections = Array.isArray(product.collections) ? product.collections.filter(Boolean) : [];
+  if (picked.length < RELATED_LIMIT && collections.length) {
+    const rows = db.prepare(`
+      SELECT * FROM products WHERE in_stock = 1 AND id != ?
+      ORDER BY is_bestseller DESC, sort_order, id DESC LIMIT 200
+    `).all(product.id);
+    add(rows.filter(r => {
+      const cols = JSON.parse(r.collections || '[]');
+      return cols.some(c => collections.includes(c)) && r.category !== product.category;
+    }));
+    add(rows.filter(r => JSON.parse(r.collections || '[]').some(c => collections.includes(c))));
+  }
+
+  if (picked.length < RELATED_LIMIT) {
+    add(db.prepare(`
+      SELECT * FROM products WHERE in_stock = 1 AND category = ? AND id != ?
+      ORDER BY is_bestseller DESC, sort_order, id DESC LIMIT ?
+    `).all(product.category, product.id, RELATED_LIMIT * 2));
+  }
+
+  if (picked.length < RELATED_LIMIT) {
+    add(db.prepare(`
+      SELECT * FROM products WHERE in_stock = 1 AND id != ? ORDER BY is_bestseller DESC, id DESC LIMIT ?
+    `).all(product.id, RELATED_LIMIT * 2));
+  }
+
+  return picked.map(parseProduct).map(p => ({
+    id: p.id, title: p.title, price: p.price, price_old: p.price_old,
+    category: p.category, image: (p.images || [])[0] || '', manual: manualIds.includes(p.id)
+  }));
 }
 
 // GET /api/products
@@ -150,12 +206,7 @@ router.get('/:id', (req, res) => {
 
     const parsed = parseProduct(product);
 
-    // Get related products from same category
-    const related = db.prepare('SELECT * FROM products WHERE category = ? AND id != ? LIMIT 4')
-      .all(product.category, product.id)
-      .map(parseProduct);
-
-    res.json({ product: parsed, related });
+    res.json({ product: parsed, related: relatedProducts(parsed) });
   } catch (err) {
     console.error('Error in /api/products/:id:', err);
     res.status(500).json({ error: 'Ошибка при получении товара' });

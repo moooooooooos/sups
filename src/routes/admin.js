@@ -21,6 +21,7 @@ function parseProduct(p) {
     images: typeof p.images === 'string' ? JSON.parse(p.images || '[]') : p.images,
     sizes: typeof p.sizes === 'string' ? JSON.parse(p.sizes || '[]') : p.sizes,
     color_variants: typeof p.color_variants === 'string' ? JSON.parse(p.color_variants || '[]') : (p.color_variants || []),
+    related_ids: typeof p.related_ids === 'string' ? JSON.parse(p.related_ids || '[]') : (p.related_ids || []),
     characteristics: typeof p.characteristics === 'string' ? JSON.parse(p.characteristics || '[]') : p.characteristics
   };
 }
@@ -162,6 +163,31 @@ router.get('/products', (req, res) => {
   }
 });
 
+// GET /api/admin/products-brief - All products in short form (для выбора «Может понравиться»)
+router.get('/products-brief', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT id, title, sku, category, price, in_stock, images FROM products ORDER BY title').all();
+    res.json({
+      products: rows.map(r => ({
+        id: r.id, title: r.title, sku: r.sku, category: r.category, price: r.price, in_stock: r.in_stock,
+        image: (JSON.parse(r.images || '[]') || [])[0] || ''
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка загрузки товаров' });
+  }
+});
+
+// «Может понравиться»: только существующие товары, без самого товара, без повторов, до 12 штук
+function saveRelated(productId, relatedIds) {
+  if (relatedIds === undefined) return;
+  const ids = [...new Set((Array.isArray(relatedIds) ? relatedIds : []).map(Number))]
+    .filter(id => Number.isInteger(id) && id > 0 && id !== Number(productId))
+    .filter(id => db.prepare('SELECT 1 FROM products WHERE id = ?').get(id))
+    .slice(0, 12);
+  db.prepare('UPDATE products SET related_ids = ? WHERE id = ?').run(JSON.stringify(ids), productId);
+}
+
 // POST /api/admin/products - Add product
 router.post('/products', (req, res) => {
   try {
@@ -177,6 +203,7 @@ router.post('/products', (req, res) => {
       images = [],
       sizes = [],
       color_variants = [],
+      related_ids,
       in_stock = 1,
       is_bestseller = 0,
       sort_order = 0
@@ -217,6 +244,7 @@ router.post('/products', (req, res) => {
       sort_order: parseInt(sort_order) || 0
     });
 
+    saveRelated(result.lastInsertRowid, related_ids);
     const newProd = db.prepare('SELECT * FROM products WHERE id = ?').get(result.lastInsertRowid);
     res.status(201).json({ success: true, product: parseProduct(newProd) });
   } catch (err) {
@@ -241,6 +269,7 @@ router.put('/products/:id', (req, res) => {
       images,
       sizes,
       color_variants,
+      related_ids,
       in_stock,
       is_bestseller,
       sort_order
@@ -289,6 +318,7 @@ router.put('/products/:id', (req, res) => {
       sort_order: sort_order !== undefined ? parseInt(sort_order) : existing.sort_order
     });
 
+    saveRelated(id, related_ids);
     const updated = db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     res.json({ success: true, product: parseProduct(updated) });
   } catch (err) {
