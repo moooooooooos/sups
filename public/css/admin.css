@@ -993,3 +993,16 @@ body.admin-body {
   .an-grid { grid-template-columns: 1fr; }
   .an-kpi-value { font-size: 1.2rem; }
 }
+
+/* Settings: delivery block */
+.settings-hint {
+  font-size: 0.8rem;
+  color: #777;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+.settings-subtitle {
+  margin: 18px 0 10px;
+  font-size: 0.9rem;
+}

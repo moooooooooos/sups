@@ -1384,6 +1384,21 @@ async function loadSettings() {
     if (elYooKey) elYooKey.value = s.yookassa_secret_key || '';
     if (elYooTest) elYooTest.checked = s.yookassa_test_mode !== '0';
     if (elWebhook) elWebhook.textContent = `${window.location.origin}/api/payments/webhook`;
+
+    const setVal = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+    setVal('setting-free-delivery', s.free_delivery_threshold ?? '7000');
+    setVal('setting-parcel-weight', s.delivery_parcel_weight_g || '300');
+    setVal('setting-item-weight', s.delivery_item_weight_g || '50');
+    setVal('setting-cdek-id', s.cdek_client_id || '');
+    setVal('setting-cdek-secret', s.cdek_client_secret || '');
+    setVal('setting-cdek-city', s.cdek_sender_city_code || '250');
+    setVal('setting-ya-token', s.yandex_delivery_token || '');
+    setVal('setting-ya-station', s.yandex_delivery_station_id || '');
+    setVal('setting-dadata-key', s.dadata_api_key || '');
+    const cdekTest = document.getElementById('setting-cdek-test');
+    if (cdekTest) cdekTest.checked = s.cdek_test_mode !== '0';
+    const yaTest = document.getElementById('setting-ya-test');
+    if (yaTest) yaTest.checked = s.yandex_delivery_test_mode !== '0';
   } catch (err) {
     console.error('Error loading settings:', err);
   }
@@ -1401,6 +1416,25 @@ async function handleSettingsSubmit(e) {
     yookassa_secret_key: document.getElementById('setting-yoo-secret-key') ? document.getElementById('setting-yoo-secret-key').value.trim() : '',
     yookassa_test_mode: document.getElementById('setting-yoo-test-mode') && document.getElementById('setting-yoo-test-mode').checked ? '1' : '0'
   };
+
+  // Доставка: перевозчики и параметры посылки
+  const deliveryFields = {
+    free_delivery_threshold: 'setting-free-delivery',
+    delivery_parcel_weight_g: 'setting-parcel-weight',
+    delivery_item_weight_g: 'setting-item-weight',
+    cdek_client_id: 'setting-cdek-id',
+    cdek_client_secret: 'setting-cdek-secret',
+    cdek_sender_city_code: 'setting-cdek-city',
+    yandex_delivery_token: 'setting-ya-token',
+    yandex_delivery_station_id: 'setting-ya-station',
+    dadata_api_key: 'setting-dadata-key'
+  };
+  Object.entries(deliveryFields).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) payload[key] = el.value.trim();
+  });
+  payload.cdek_test_mode = document.getElementById('setting-cdek-test')?.checked ? '1' : '0';
+  payload.yandex_delivery_test_mode = document.getElementById('setting-ya-test')?.checked ? '1' : '0';
 
   try {
     const res = await fetch('/api/admin/settings', {

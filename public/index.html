@@ -747,7 +747,7 @@
       <div class="footer-bottom">
         <div>© 2026 САПС (sups-official.ru). Все права защищены.</div>
         <div class="footer-requisites">
-          Доставка по всей России (СДЭК, Почта России)
+          Доставка по всей России (СДЭК, Яндекс Доставка)
         </div>
       </div>
     </div>
@@ -860,32 +860,12 @@
             </div>
 
             <div class="form-group">
-              <label class="form-label">Email для чека</label>
-              <input type="email" id="order-email" class="form-input" placeholder="mail@example.com">
+              <label class="form-label">Email для чека *</label>
+              <input type="email" id="order-email" class="form-input" placeholder="mail@example.com" required>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Способ доставки</label>
-              <div class="delivery-options">
-                <div class="delivery-option-card selected" data-method="cdek_pvz" data-price="350">
-                  <strong>СДЭК (ПВЗ)</strong>
-                  <div style="font-size:0.75rem; color:#666;">350 ₽ (2-4 дня)</div>
-                </div>
-                <div class="delivery-option-card" data-method="cdek_courier" data-price="550">
-                  <strong>СДЭК (Курьер)</strong>
-                  <div style="font-size:0.75rem; color:#666;">550 ₽ (курьером в руки)</div>
-                </div>
-                <div class="delivery-option-card" data-method="post" data-price="390">
-                  <strong>Почта России</strong>
-                  <div style="font-size:0.75rem; color:#666;">390 ₽ (по всей РФ)</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Город и адрес доставки / пункт выдачи *</label>
-              <input type="text" id="order-address" class="form-input" placeholder="г. Москва, ул. Ленина, д. 5 (или адрес ПВЗ)" required>
-            </div>
+            <!-- Доставка: город, способ, ПВЗ или адрес — js/delivery.js -->
+            <div id="delivery-widget" class="delivery-widget"></div>
 
             <div class="form-group">
               <label class="form-label">Комментарий к заказу</label>
@@ -1108,6 +1088,7 @@
   <!-- Scripts -->
   <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
   <script src="/js/cart.js"></script>
+  <script src="/js/delivery.js"></script>
   <script src="/js/catalog.js?v=20261005a"></script>
   <script src="/js/main.js?v=20261005f"></script>
   <script src="/js/analytics.js" defer></script>

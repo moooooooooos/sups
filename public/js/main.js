@@ -267,11 +267,22 @@ function initCheckoutForm() {
   if (orderForm) {
     orderForm.addEventListener('submit', (e) => {
       e.preventDefault();
+      const dw = window.supsDelivery;
+      if (dw) {
+        if (!dw.validateContacts()) return;
+        const deliveryError = dw.validate();
+        if (deliveryError) {
+          dw.showError(deliveryError);
+          document.getElementById('delivery-widget')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          return;
+        }
+      }
       const formData = {
         name: document.getElementById('order-name').value,
         phone: document.getElementById('order-phone').value,
         email: document.getElementById('order-email').value,
-        address: document.getElementById('order-address').value,
+        address: dw ? dw.getLegacyAddress() : '',
+        delivery: dw ? dw.getSelection() : null,
         comment: document.getElementById('order-comment').value,
         offer_accepted: !!document.getElementById('order-consent-offer')?.checked,
         pd_consent: !!document.getElementById('order-consent-pd')?.checked
@@ -351,11 +362,12 @@ const BUYERS_TOPICS = {
     title: 'Доставка и оплата',
     content: `
       <h4>Способы и география доставки</h4>
-      <p>Мы доставляем заказы по всей территории России и странам СНГ надежными транспортными службами:</p>
+      <p>Мы доставляем заказы по всей России:</p>
       <ul>
-        <li><strong>СДЭК:</strong> доставка курьером до двери или в удобный пункт выдачи заказов (ПВЗ). Срок: 2–5 рабочих дней.</li>
-        <li><strong>Почта России:</strong> отправления 1-м классом с трек-номером отслеживания. Срок: 3–7 рабочих дней.</li>
+        <li><strong>СДЭК:</strong> пункт выдачи, постамат или курьер до двери.</li>
+        <li><strong>Яндекс Доставка:</strong> пункт выдачи или курьер до двери.</li>
       </ul>
+      <p>При оформлении заказа выберите город — мы покажем доступные способы, точную стоимость и срок доставки по тарифам перевозчика. Пункт выдачи выбирается из списка, адрес для курьера проверяется автоматически.</p>
       <h4>Оплата</h4>
       <ul>
         <li>Банковские карты (МИР, Visa, Mastercard любых банков РФ).</li>

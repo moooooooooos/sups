@@ -140,6 +140,11 @@ try { db.exec("ALTER TABLE reviews ADD COLUMN pd_consent_at TEXT;"); } catch (e)
 try { db.exec("ALTER TABLE reviews ADD COLUMN publish_consent_at TEXT;"); } catch (e) {}
 // Устройство, с которого оформлен заказ (mobile / tablet / desktop)
 try { db.exec("ALTER TABLE orders ADD COLUMN device TEXT;"); } catch (e) {}
+// Доставка, проверенная у перевозчика: cdek / yandex, pvz / courier, код ПВЗ, код города СДЭК
+try { db.exec("ALTER TABLE orders ADD COLUMN delivery_provider TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE orders ADD COLUMN delivery_type TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE orders ADD COLUMN delivery_point_id TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE orders ADD COLUMN delivery_city_code INTEGER;"); } catch (e) {}
 
 // Собственная анонимная веб-аналитика: визиты и события (без IP и без привязки к покупателю)
 db.exec(`

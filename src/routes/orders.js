@@ -4,6 +4,13 @@ const db = require('../db');
 const { sendTelegramMessage, formatOrderNotification } = require('../services/telegram');
 const { optionalCustomer } = require('./customers');
 const yookassa = require('../services/yookassa');
+const delivery = require('../services/delivery');
+const contacts = require('../services/contacts');
+
+function setting(key, fallback) {
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key);
+  return row && row.value !== null && row.value !== '' ? row.value : fallback;
+}
 
 function getTierInfo(totalSpent) {
   if (totalSpent >= 50000) return { discount: 15, cashbackPct: 12 };
@@ -19,11 +26,10 @@ router.post('/', optionalCustomer, async (req, res) => {
       customer_name,
       customer_phone,
       customer_email,
-      delivery_method = 'СДЭК',
       delivery_address,
+      delivery: deliverySelection,
       comment,
       items,
-      delivery_price = 0,
       use_bonuses = false,
       offer_accepted = false,
       pd_consent = false,
@@ -34,13 +40,25 @@ router.post('/', optionalCustomer, async (req, res) => {
       return res.status(400).json({ error: 'Подтвердите согласие с офертой и на обработку персональных данных' });
     }
 
-    if (!customer_name || !customer_phone) {
-      return res.status(400).json({ error: 'Пожалуйста, укажите имя и номер телефона' });
+    if (!customer_name || !String(customer_name).trim()) {
+      return res.status(400).json({ error: 'Пожалуйста, укажите имя' });
     }
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Корзина пуста' });
     }
+
+    // Контакты: только реальный мобильный номер и email с существующим почтовым доменом
+    const phoneNormalized = contacts.normalizePhone(customer_phone);
+    if (!phoneNormalized) {
+      return res.status(400).json({ error: 'Укажите мобильный номер в формате +7 9XX XXX-XX-XX', field: 'phone' });
+    }
+    const emailCheck = await contacts.checkEmail(customer_email);
+    if (!emailCheck.ok) {
+      return res.status(400).json({ error: emailCheck.error, field: 'email' });
+    }
+    const phoneClean = contacts.formatPhone(phoneNormalized);
+    const emailClean = emailCheck.email;
 
     // Calculate subtotal
     let subtotal = 0;
@@ -55,12 +73,9 @@ router.post('/', optionalCustomer, async (req, res) => {
 
     // Try finding customer by email or phone if not logged in
     if (!customerObj) {
-      const cleanEmail = (customer_email || '').trim().toLowerCase();
-      const cleanPhone = (customer_phone || '').trim();
-      if (cleanEmail || cleanPhone) {
-        customerObj = db.prepare("SELECT * FROM customers WHERE (email = ? AND email != '') OR (phone = ? AND phone != '')").get(cleanEmail, cleanPhone);
-        if (customerObj) customerId = customerObj.id;
-      }
+      customerObj = db.prepare("SELECT * FROM customers WHERE (email = ? AND email != '') OR (phone = ? AND phone != '') OR (phone = ? AND phone != '')")
+        .get(emailClean, phoneClean, String(customer_phone).trim());
+      if (customerObj) customerId = customerObj.id;
     }
 
     let discountAmount = 0;
@@ -79,7 +94,35 @@ router.post('/', optionalCustomer, async (req, res) => {
       payableSubtotal -= bonusUsed;
     }
 
-    const deliv = parseFloat(delivery_price) || 0;
+    // Доставка проверяется у перевозчика, цена считается здесь, а не берётся из браузера
+    const itemsCount = items.reduce((n, item) => n + (parseInt(item.quantity, 10) || 1), 0);
+    const providers = delivery.enabledProviders();
+    let shipping;
+    if (providers.cdek || providers.yandex) {
+      try {
+        shipping = await delivery.resolveSelection(deliverySelection, itemsCount, subtotal);
+      } catch (shipErr) {
+        console.error('Delivery check error:', shipErr.message);
+        return res.status(502).json({ error: 'Не удалось проверить доставку, попробуйте ещё раз через минуту', field: 'delivery' });
+      }
+      if (!shipping.ok) return res.status(400).json({ error: shipping.error, field: 'delivery' });
+    } else {
+      // Перевозчики ещё не подключены: адрес вручную, цена из настроек
+      const addressText = String(delivery_address || '').trim();
+      if (addressText.length < 10 || !/\d/.test(addressText)) {
+        return res.status(400).json({ error: 'Укажите полный адрес доставки: город, улица, дом', field: 'delivery' });
+      }
+      shipping = {
+        provider: null, type: null, point_id: null, city_code: null,
+        price: parseFloat(setting('delivery_cdek_pvz', '350')) || 0,
+        method_label: 'СДЭК', address_text: addressText.slice(0, 300)
+      };
+    }
+
+    const freeThreshold = parseFloat(setting('free_delivery_threshold', '7000')) || 0;
+    const deliv = freeThreshold && payableSubtotal >= freeThreshold ? 0 : shipping.price;
+    const delivery_method = shipping.method_label;
+    const deliveryAddress = shipping.address_text;
     const total_price = payableSubtotal + deliv;
 
     // Generate Order Number: SUPS-YYYYMMDD-XXXX
@@ -91,11 +134,13 @@ router.post('/', optionalCustomer, async (req, res) => {
       INSERT INTO orders (
         order_number, customer_id, customer_name, customer_phone, customer_email,
         delivery_method, delivery_address, comment, items,
-        subtotal, delivery_price, bonus_used, discount_amount, total_price, status, pd_consent_at, device
+        subtotal, delivery_price, bonus_used, discount_amount, total_price, status, pd_consent_at, device,
+        delivery_provider, delivery_type, delivery_point_id, delivery_city_code
       ) VALUES (
         @order_number, @customer_id, @customer_name, @customer_phone, @customer_email,
         @delivery_method, @delivery_address, @comment, @items,
-        @subtotal, @delivery_price, @bonus_used, @discount_amount, @total_price, 'new', datetime('now'), @device
+        @subtotal, @delivery_price, @bonus_used, @discount_amount, @total_price, 'new', datetime('now'), @device,
+        @delivery_provider, @delivery_type, @delivery_point_id, @delivery_city_code
       )
     `);
 
@@ -103,10 +148,14 @@ router.post('/', optionalCustomer, async (req, res) => {
       order_number,
       customer_id: customerId,
       customer_name: customer_name.trim(),
-      customer_phone: customer_phone.trim(),
-      customer_email: customer_email ? customer_email.trim() : '',
-      delivery_method: delivery_method || 'СДЭК',
-      delivery_address: delivery_address ? delivery_address.trim() : '',
+      customer_phone: phoneClean,
+      customer_email: emailClean,
+      delivery_method,
+      delivery_address: deliveryAddress,
+      delivery_provider: shipping.provider,
+      delivery_type: shipping.type,
+      delivery_point_id: shipping.point_id,
+      delivery_city_code: shipping.city_code,
       comment: comment ? comment.trim() : '',
       items: JSON.stringify(items),
       subtotal,
@@ -135,10 +184,10 @@ router.post('/', optionalCustomer, async (req, res) => {
       id: result.lastInsertRowid,
       order_number,
       customer_name,
-      customer_phone,
-      customer_email,
+      customer_phone: phoneClean,
+      customer_email: emailClean,
       delivery_method,
-      delivery_address,
+      delivery_address: deliveryAddress,
       comment,
       items,
       subtotal,
@@ -171,8 +220,8 @@ router.post('/', optionalCustomer, async (req, res) => {
           order_number,
           total_price,
           customer_name,
-          customer_phone,
-          customer_email,
+          customer_phone: phoneClean,
+          customer_email: emailClean,
           delivery_method,
           delivery_price: deliv,
           items

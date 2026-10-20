@@ -7,8 +7,8 @@ const SUPS_CART_KEY = 'sups_cart_v1';
 class SupsCart {
   constructor() {
     this.items = this.loadCart();
-    this.deliveryMethod = 'cdek_pvz';
-    this.deliveryPrice = 350;
+    this.deliveryMethod = null; // выбирается в форме заказа (js/delivery.js)
+    this.deliveryPrice = 0;
     this.freeDeliveryThreshold = 7000;
     this.appliedPromo = null;
     this.initUI();
@@ -261,7 +261,10 @@ class SupsCart {
       }
     }
 
-    if (delivEl) delivEl.textContent = isFree ? 'Бесплатно' : `${delivPrice} ₽`;
+    if (delivEl) {
+      if (isFree) delivEl.textContent = 'Бесплатно';
+      else delivEl.textContent = this.deliveryMethod ? `${delivPrice.toLocaleString('ru-RU')} ₽` : 'выберите способ';
+    }
     if (totalEl) totalEl.textContent = `${total.toLocaleString('ru-RU')} ₽`;
   }
 
@@ -329,24 +332,15 @@ class SupsCart {
       return;
     }
 
-    const subtotal = this.getSubtotal();
-    let promoDiscount = 0;
-    if (this.appliedPromo) {
-      promoDiscount = Math.round((subtotal * this.appliedPromo.discount_percent) / 100);
-    }
-    const payableSubtotal = Math.max(0, subtotal - promoDiscount);
-    const isFree = payableSubtotal >= this.freeDeliveryThreshold;
-    const deliveryPrice = isFree ? 0 : this.deliveryPrice;
-
+    // Способ и цену доставки сервер проверяет и считает сам по выбору из формы
     const payload = {
       customer_name: formData.name,
       customer_phone: formData.phone,
       customer_email: formData.email,
-      delivery_method: this.deliveryMethod === 'cdek_courier' ? 'СДЭК Курьер' : (this.deliveryMethod === 'post' ? 'Почта России' : 'СДЭК ПВЗ'),
+      delivery: formData.delivery || null,
       delivery_address: formData.address,
       comment: formData.comment,
       items: this.items,
-      delivery_price: deliveryPrice,
       promo_code: this.appliedPromo ? this.appliedPromo.code : null,
       offer_accepted: formData.offer_accepted === true,
       pd_consent: formData.pd_consent === true,
@@ -374,6 +368,10 @@ class SupsCart {
       const data = await res.json().catch(() => ({}));
       // Без подтверждения сервера заказ не считается оформленным
       if (!res.ok || !data.order_number) {
+        // Ошибку в телефоне, email или доставке показываем рядом с полем
+        const dw = window.supsDelivery;
+        if (dw && data.field === 'delivery') { dw.showError(data.error); return; }
+        if (dw && (data.field === 'phone' || data.field === 'email')) { dw.fieldError(data.field, data.error); return; }
         throw new Error(data.error || 'сервер не принял заказ, попробуйте ещё раз');
       }
 
